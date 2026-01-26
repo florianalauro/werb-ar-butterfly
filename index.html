@@ -1,40 +1,66 @@
-const swarm = document.querySelector('#swarm');
-const numButterflies = 20; // Aumentiamo un po' il numero per l'effetto tunnel
-
-for (let i = 0; i < numButterflies; i++) {
-    let butterfly = document.createElement('a-entity');
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Sciame di Farfalle AR</title>
+    <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+  </head>
+  <body style="margin: 0; overflow: hidden;">
     
-    butterfly.setAttribute('gltf-model', '#butterflyModel');
-    butterfly.setAttribute('animation-mixer', 'clip: Flying');
-    butterfly.setAttribute('scale', '0.04 0.04 0.04');
+    <a-scene renderer="colorManagement: true;" xr-mode-ui="enabled: true" webxr="optionalFeatures: hit-test;">
+      
+      <a-assets>
+        <a-asset-item id="butterflyModel" src="animated_butterfly.glb"></a-asset-item>
+      </a-assets>
 
-    // Funzione per resettare la farfalla a destra
-    const resetButterfly = (el) => {
-        const startX = 5; // Inizia a 5 metri a destra
-        const randomY = Math.random() * 2 + 1; // Altezza casuale
-        const randomZ = (Math.random() - 0.5) * 4; // Profondità casuale per l'effetto tunnel
+      <a-entity id="swarm"></a-entity>
+
+      <a-entity camera look-controls wasd-controls></a-entity>
+    </a-scene>
+
+    <script>
+      // Script per generare 15 farfalle in posizioni casuali
+      const swarm = document.querySelector('#swarm');
+      const numButterflies = 20; // Aumentiamo un po' il numero per l'effetto tunnel
+    
+      for (let i = 0; i < numButterflies; i++) {
+          let butterfly = document.createElement('a-entity');
         
-        el.setAttribute('position', `${startX} ${randomY} ${randomZ}`);
-        el.setAttribute('rotation', '0 -90 0'); // Ruotata per guardare a sinistra
+          butterfly.setAttribute('gltf-model', '#butterflyModel');
+          butterfly.setAttribute('animation-mixer', 'clip: Flying');
+          butterfly.setAttribute('scale', '0.04 0.04 0.04');
+    
+          // Funzione per resettare la farfalla a destra
+          const resetButterfly = (el) => {
+              const startX = 5; // Inizia a 5 metri a destra
+              const randomY = Math.random() * 2 + 1; // Altezza casuale
+              const randomZ = (Math.random() - 0.5) * 4; // Profondità casuale per l'effetto tunnel
+            
+              el.setAttribute('position', `${startX} ${randomY} ${randomZ}`);
+              el.setAttribute('rotation', '0 -90 0'); // Ruotata per guardare a sinistra
+    
+              // Animazione verso sinistra
+              el.setAttribute('animation', {
+                  property: 'position',
+                  to: `-5 ${randomY} ${randomZ}`, // Arriva a 5 metri a sinistra
+                  dur: Math.random() * 5000 + 5000, // Velocità variabile tra 5 e 10 secondi
+                  easing: 'linear',
+                  loop: false // Gestiamo il loop manualmente al termine
+              });
+          };
 
-        // Animazione verso sinistra
-        el.setAttribute('animation', {
-            property: 'position',
-            to: `-5 ${randomY} ${randomZ}`, // Arriva a 5 metri a sinistra
-            dur: Math.random() * 5000 + 5000, // Velocità variabile tra 5 e 10 secondi
-            easing: 'linear',
-            loop: false // Gestiamo il loop manualmente al termine
-        });
-    };
+      // Ascolta quando l'animazione finisce per resettare la farfalla
+      butterfly.addEventListener('animationcomplete', () => {
+          resetButterfly(butterfly);
+      });
 
-    // Ascolta quando l'animazione finisce per resettare la farfalla
-    butterfly.addEventListener('animationcomplete', () => {
-        resetButterfly(butterfly);
-    });
-
-    // Avvio iniziale con un ritardo casuale per non farle partire tutte insieme
-    setTimeout(() => {
-        swarm.appendChild(butterfly);
-        resetButterfly(butterfly);
-    }, Math.random() * 5000);
-}
+      // Avvio iniziale con un ritardo casuale per non farle partire tutte insieme
+      setTimeout(() => {
+          swarm.appendChild(butterfly);
+          resetButterfly(butterfly);
+      }, Math.random() * 5000);
+  }
+    </script>
+  </body>
+</html>
