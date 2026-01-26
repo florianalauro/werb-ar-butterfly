@@ -24,7 +24,7 @@
       const swarm = document.querySelector('#swarm');
 const numButterflies = 20;
 
-// Colori in formato esadecimale
+// Colori definiti
 const FUCSIA = "#FF00FF";
 const ARANCIONE = "#FF8800";
 
@@ -35,31 +35,17 @@ for (let i = 0; i < numButterflies; i++) {
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
     butterfly.setAttribute('scale', '0.04 0.04 0.04');
 
-    // Funzione per applicare il colore al materiale del modello 3D
-    const applyColor = (el, color) => {
-        const mesh = el.getObject3D('mesh');
-        if (mesh) {
-            mesh.traverse(node => {
-                if (node.isMesh) {
-                    node.material.color.set(color);
-                }
-            });
-        }
-    };
-
+    // Funzione per gestire il movimento e il reset cromatco
     const resetButterfly = (el) => {
         const startX = 5;
         const randomY = Math.random() * 2 + 1;
         const randomZ = (Math.random() - 0.5) * 4;
-        const duration = Math.random() * 5000 + 5000;
+        const duration = Math.random() * 5000 + 7000; // Un po' più lente per vedere meglio il cambio
         
         el.setAttribute('position', `${startX} ${randomY} ${randomZ}`);
         el.setAttribute('rotation', '0 -90 0');
 
-        // 1. Inizia come Fucsia
-        el.setAttribute('material', 'color', FUCSIA);
-
-        // 2. Animazione movimento (X: da 5 a -5)
+        // Animazione Movimento
         el.setAttribute('animation__move', {
             property: 'position',
             to: `-5 ${randomY} ${randomZ}`,
@@ -68,32 +54,49 @@ for (let i = 0; i < numButterflies; i++) {
             loop: false
         });
 
-        // 3. Animazione Colore (Gradiente morbido)
-        // Inizia dopo 1/4 (25%) e finisce ai 3/4 (75%) della durata totale
-        el.setAttribute('animation__color', {
-            property: 'material.color',
-            type: 'color',
-            from: FUCSIA,
-            to: ARANCIONE,
-            dur: duration * 0.5, // Dura metà del viaggio (da 1/4 a 3/4)
-            delay: duration * 0.25, // Aspetta il primo quarto
-            easing: 'linear',
-            loop: false
+        // Applichiamo l'animazione del colore solo se il modello è già pronto
+        const mesh = el.getObject3D('mesh');
+        if (mesh) {
+            animateWings(mesh, duration);
+        }
+    };
+
+    // Funzione specifica per animare solo le ali
+    const animateWings = (root, totalDuration) => {
+        root.traverse(node => {
+            // Cerchiamo l'oggetto che si chiama "Wings" o che ha il materiale "Wings"
+            if (node.isMesh && (node.name.includes("Wings") || node.material.name.includes("Wings"))) {
+                
+                // Reset al fucsia iniziale
+                node.material.color.set(FUCSIA);
+
+                // Creiamo un'animazione manuale per il gradiente tra 1/4 e 3/4 del viaggio
+                const startTime = totalDuration * 0.25;
+                const transitionTime = totalDuration * 0.50;
+
+                setTimeout(() => {
+                    // Usiamo una transizione fluida CSS-like gestita da A-Frame/Three.js
+                    new AFRAME.TWEEN.Tween(node.material.color)
+                        .to({r: 1, g: 0.53, b: 0}, transitionTime) // Colore Arancione in RGB (approssimato)
+                        .easing(AFRAME.TWEEN.Easing.Linear.None)
+                        .start();
+                }, startTime);
+            }
         });
     };
+
+    // Evento fondamentale: si attiva solo quando le ali vengono trovate nel file caricato
+    butterfly.addEventListener('model-loaded', () => {
+        resetButterfly(butterfly);
+    });
 
     butterfly.addEventListener('animationcomplete__move', () => {
         resetButterfly(butterfly);
     });
 
-    // Aspetta che il modello sia caricato prima di manipolare i materiali
-    butterfly.addEventListener('model-loaded', () => {
-        applyColor(butterfly, FUCSIA);
-    });
-
+    // Partenza scaglionata
     setTimeout(() => {
         swarm.appendChild(butterfly);
-        resetButterfly(butterfly);
     }, Math.random() * 5000);
 }
     </script>
