@@ -22,45 +22,80 @@
     <script>
       // Script per generare 15 farfalle in posizioni casuali
       const swarm = document.querySelector('#swarm');
-      const numButterflies = 500; // Aumentiamo un po' il numero per l'effetto tunnel
+const numButterflies = 20;
+
+// Colori in formato esadecimale
+const FUCSIA = "#FF00FF";
+const ARANCIONE = "#FF8800";
+
+for (let i = 0; i < numButterflies; i++) {
+    let butterfly = document.createElement('a-entity');
     
-      for (let i = 0; i < numButterflies; i++) {
-          let butterfly = document.createElement('a-entity');
+    butterfly.setAttribute('gltf-model', '#butterflyModel');
+    butterfly.setAttribute('animation-mixer', 'clip: Flying');
+    butterfly.setAttribute('scale', '0.04 0.04 0.04');
+
+    // Funzione per applicare il colore al materiale del modello 3D
+    const applyColor = (el, color) => {
+        const mesh = el.getObject3D('mesh');
+        if (mesh) {
+            mesh.traverse(node => {
+                if (node.isMesh) {
+                    node.material.color.set(color);
+                }
+            });
+        }
+    };
+
+    const resetButterfly = (el) => {
+        const startX = 5;
+        const randomY = Math.random() * 2 + 1;
+        const randomZ = (Math.random() - 0.5) * 4;
+        const duration = Math.random() * 5000 + 5000;
         
-          butterfly.setAttribute('gltf-model', '#butterflyModel');
-          butterfly.setAttribute('animation-mixer', 'clip: Flying');
-          butterfly.setAttribute('scale', '0.04 0.04 0.04');
-    
-          // Funzione per resettare la farfalla a destra
-          const resetButterfly = (el) => {
-              const startX = 5; // Inizia a 5 metri a destra
-              const randomY = Math.random() * 2 + 1; // Altezza casuale
-              const randomZ = (Math.random() - 0.5) * 4; // Profondità casuale per l'effetto tunnel
-            
-              el.setAttribute('position', `${startX} ${randomY} ${randomZ}`);
-              el.setAttribute('rotation', '0 -90 0'); // Ruotata per guardare a sinistra
-    
-              // Animazione verso sinistra
-              el.setAttribute('animation', {
-                  property: 'position',
-                  to: `-5 ${randomY} ${randomZ}`, // Arriva a 5 metri a sinistra
-                  dur: Math.random() * 5000 + 5000, // Velocità variabile tra 5 e 10 secondi
-                  easing: 'linear',
-                  loop: false // Gestiamo il loop manualmente al termine
-              });
-          };
+        el.setAttribute('position', `${startX} ${randomY} ${randomZ}`);
+        el.setAttribute('rotation', '0 -90 0');
 
-      // Ascolta quando l'animazione finisce per resettare la farfalla
-      butterfly.addEventListener('animationcomplete', () => {
-          resetButterfly(butterfly);
-      });
+        // 1. Inizia come Fucsia
+        el.setAttribute('material', 'color', FUCSIA);
 
-      // Avvio iniziale con un ritardo casuale per non farle partire tutte insieme
-      setTimeout(() => {
-          swarm.appendChild(butterfly);
-          resetButterfly(butterfly);
-      }, Math.random() * 5000);
-  }
+        // 2. Animazione movimento (X: da 5 a -5)
+        el.setAttribute('animation__move', {
+            property: 'position',
+            to: `-5 ${randomY} ${randomZ}`,
+            dur: duration,
+            easing: 'linear',
+            loop: false
+        });
+
+        // 3. Animazione Colore (Gradiente morbido)
+        // Inizia dopo 1/4 (25%) e finisce ai 3/4 (75%) della durata totale
+        el.setAttribute('animation__color', {
+            property: 'material.color',
+            type: 'color',
+            from: FUCSIA,
+            to: ARANCIONE,
+            dur: duration * 0.5, // Dura metà del viaggio (da 1/4 a 3/4)
+            delay: duration * 0.25, // Aspetta il primo quarto
+            easing: 'linear',
+            loop: false
+        });
+    };
+
+    butterfly.addEventListener('animationcomplete__move', () => {
+        resetButterfly(butterfly);
+    });
+
+    // Aspetta che il modello sia caricato prima di manipolare i materiali
+    butterfly.addEventListener('model-loaded', () => {
+        applyColor(butterfly, FUCSIA);
+    });
+
+    setTimeout(() => {
+        swarm.appendChild(butterfly);
+        resetButterfly(butterfly);
+    }, Math.random() * 5000);
+}
     </script>
   </body>
 </html>
