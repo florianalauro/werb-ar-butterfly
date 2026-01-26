@@ -20,103 +20,107 @@
     </a-scene>
 
     <script>
-      // Componente personalizzato per gestire il comportamento di ogni farfalla
-      AFRAME.registerComponent('butterfly-logic', {
-        init: function () {
-          this.fucsia = new THREE.Color("#CE0058");
-          this.arancione = new THREE.Color("#FE5000");
-          this.wingMaterials = [];
-          this.isReady = false;
-
-          // Attendiamo il caricamento del modello 3D
-          this.el.addEventListener('model-loaded', () => {
-            const mesh = this.el.getObject3D('mesh');
-            mesh.traverse(node => {
-              // Cerchiamo il materiale delle ali ("Wings") definito nel file .glb
-              if (node.isMesh && node.material && node.material.name === "Wings") {
-                // CLONAZIONE: Necessaria per avere colori diversi su farfalle diverse
-                node.material = node.material.clone();
-                this.wingMaterials.push(node.material);
-              }
-            });
-            this.reset();
-            this.isReady = true;
-          });
-        },
-
-        reset: function () {
-          // Parametri del "tunnel"
-          this.startX = 6;
-          this.endX = -6;
-          this.posY = Math.random() * 2 + 1; // Altezza casuale
-          this.posZ = (Math.random() - 0.5) * 4; // Profondità casuale
-          this.duration = Math.random() * 4000 + 6000; // Velocità variabile
-          this.startTime = Date.now() + Math.random() * 3000; // Partenza scaglionata
-          
-          this.el.object3D.position.set(this.startX, this.posY, this.posZ);
-          this.el.setAttribute('rotation', '0 -90 0');
-          this.el.setAttribute('scale', '0.04 0.04 0.04');
-        },
-
-        tick: function () {
-          if (!this.isReady) return;
-          
-          const now = Date.now();
-          if (now < this.startTime) return;
-
-          let elapsed = now - this.startTime;
-          let progress = elapsed / this.duration;
-
-          // Se il viaggio è finito, ricomincia da destra
-          if (progress > 1) {
-            this.reset();
-            return;
-          }
-
-          // Aggiorna posizione X
-          const currentX = this.startX + (this.endX - this.startX) * progress;
-          this.el.object3D.position.x = currentX;
-
-          // Gestione GRADIENTE CROMATICO sulle ali
-          let colorLerp = 0;
-          if (progress < 0.25) {
-            colorLerp = 0; // 0-25% del percorso: Fucsia puro
-          } else if (progress > 0.75) {
-            colorLerp = 1; // 75-100% del percorso: Arancione puro
-          } else {
-            // Mappa il range centrale (0.25 - 0.75) su (0 - 1) per il gradiente
-            colorLerp = (progress - 0.25) / 0.5;
-          }
-
-          // Applica il colore interpolato ai materiali delle ali
-          this.wingMaterials.forEach(mat => {
-            mat.color.copy(this.fucsia).lerp(this.arancione, colorLerp);
-          });
-        }
-      });
-    </script>
-
-    <a-scene renderer="colorManagement: true;" xr-mode-ui="enabled: true" webxr="optionalFeatures: hit-test;">
-      <a-assets>
-        <a-asset-item id="butterflyModel" src="animated_butterfly.glb"></a-asset-item>
-      </a-assets>
-
-      <a-entity id="swarm-container"></a-entity>
-
-      <a-entity camera look-controls></a-entity>
-    </a-scene>
-
-    <script>
-      const container = document.querySelector('#swarm-container');
-      const numButterflies = 40; // 500 potrebbero rallentare troppo il telefono, 40-50 è ideale
-
+      const swarm = document.querySelector('#swarm');
+      const numButterflies = 500;
+      
+      // Colori definiti
+      const FUCSIA = "#CE0058";
+      const ARANCIONE = "#FE5000";
+      
       for (let i = 0; i < numButterflies; i++) {
-        let b = document.createElement('a-entity');
-        b.setAttribute('gltf-model', '#butterflyModel');
-        b.setAttribute('animation-mixer', 'clip: Flying');
-        b.setAttribute('butterfly-logic', ''); // Attiva il nostro componente
-        container.appendChild(b);
+          let butterfly = document.createElement('a-entity');
+          
+          butterfly.setAttribute('gltf-model', '#butterflyModel');
+          butterfly.setAttribute('animation-mixer', 'clip: Flying');
+          butterfly.setAttribute('scale', '0.04 0.04 0.04');
+      
+          // Funzione per gestire il movimento e il reset cromatco
+          const resetButterfly = (el) => {
+              const startX = 5;
+              const randomY = Math.random() * 2 + 1;
+              const randomZ = (Math.random() - 0.5) * 4;
+              const duration = Math.random() * 5000 + 7000; // Un po' più lente per vedere meglio il cambio
+              
+              el.setAttribute('position', `${startX} ${randomY} ${randomZ}`);
+              el.setAttribute('rotation', '0 -90 0');
+      
+              // Animazione Movimento
+              el.setAttribute('animation__move', {
+                  property: 'position',
+                  to: `-5 ${randomY} ${randomZ}`,
+                  dur: duration,
+                  easing: 'linear',
+                  loop: false
+              });
+      
+              // Applichiamo l'animazione del colore solo se il modello è già pronto
+              const mesh = el.getObject3D('mesh');
+              if (mesh) {
+                  animateWings(mesh, duration);
+              }
+          };
+      
+          // Funzione specifica per animare solo le ali
+          const animateWings = (root, totalDuration) => {
+              root.traverse(node => {
+                  // Cerchiamo l'oggetto che si chiama "Wings" o che ha il materiale "Wings"
+                  if (node.isMesh && (node.name.includes("Object_7") || node.material.name.includes("Wings"))) {
+                      
+                      // Reset al fucsia iniziale
+                      node.material.color.set(FUCSIA);
+      
+                      // Creiamo un'animazione manuale per il gradiente tra 1/4 e 3/4 del viaggio
+                      const startTime = totalDuration * 0.25;
+                      const transitionTime = totalDuration * 0.50;
+      
+                      setTimeout(() => {
+                          // Usiamo una transizione fluida CSS-like gestita da A-Frame/Three.js
+                          new AFRAME.TWEEN.Tween(node.material.color)
+                              .to({color: ARANCIONE}, transitionTime) // Colore Arancione in RGB (approssimato)
+                              .easing(AFRAME.TWEEN.Easing.Linear.None)
+                              .start();
+                      }, startTime);
+                  }
+              });
+          };
+      
+          // Evento fondamentale: si attiva solo quando le ali vengono trovate nel file caricato
+          butterfly.addEventListener('model-loaded', () => {
+              resetButterfly(butterfly);
+          });
+      
+          butterfly.addEventListener('animationcomplete__move', () => {
+              resetButterfly(butterfly);
+          });
+      
+          // Partenza scaglionata
+          setTimeout(() => {
+              swarm.appendChild(butterfly);
+          }, Math.random() * 5000);
       }
+          </script>
+      
+          <a-scene renderer="colorManagement: true;" xr-mode-ui="enabled: true" webxr="optionalFeatures: hit-test;">
+            <a-assets>
+              <a-asset-item id="butterflyModel" src="animated_butterfly.glb"></a-asset-item>
+            </a-assets>
+      
+            <a-entity id="swarm-container"></a-entity>
+      
+            <a-entity camera look-controls></a-entity>
+          </a-scene>
+      
+          <script>
+            const container = document.querySelector('#swarm-container');
+            const numButterflies = 40; // 500 potrebbero rallentare troppo il telefono, 40-50 è ideale
+      
+            for (let i = 0; i < numButterflies; i++) {
+              let b = document.createElement('a-entity');
+              b.setAttribute('gltf-model', '#butterflyModel');
+              b.setAttribute('animation-mixer', 'clip: Flying');
+              b.setAttribute('butterfly-logic', ''); // Attiva il nostro componente
+              container.appendChild(b);
+            }
     </script>
   </body>
 </html>
