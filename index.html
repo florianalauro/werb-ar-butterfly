@@ -23,7 +23,7 @@
             const mesh = this.el.getObject3D('mesh');
             mesh.traverse(node => {
               // Cerchiamo specificamente le mesh delle ali Object_0 e Object_1 o il materiale Wings
-              if (node.isMesh && (node.name.includes("Object_0") || node.name.includes("Object_1") || (node.material && node.material.name === "Wings"))) {
+              if (node.isMesh && (node.name.includes("Object_7") || node.name.includes("Object_9") || (node.material && node.material.name === "Wings"))) {
                 
                 // CLONAZIONE: Creiamo un materiale unico per questa farfalla
                 node.material = node.material.clone();
