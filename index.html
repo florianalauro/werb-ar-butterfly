@@ -9,6 +9,7 @@
   <body style="margin: 0; overflow: hidden;">
     
     <script>
+      // Colori richiesti dall'utente
       const HEX_FUCSIA = "#CE0058";
       const HEX_ARANCIONE = "#FE5000";
 
@@ -25,19 +26,23 @@
           this.posZ = (Math.random() - 0.5) * 5;
           this.duration = Math.random() * 4000 + 6000;
           
-          // IMPORTANTE: Progresso casuale così il tunnel è già pieno
+          // Distribuzione istantanea nel tunnel
           this.progress = Math.random();
 
           this.el.addEventListener('model-loaded', () => {
             const mesh = this.el.getObject3D('mesh');
             mesh.traverse(node => {
-              // Target: materiale "Wings" (Object_7 e Object_9)
-              if (node.isMesh && node.material && node.material.name === "Wings") {
+              // Identifichiamo le ali (Object_0/1 o materiale Wings)
+              if (node.isMesh && (node.name.includes("Object_0") || node.name.includes("Object_1") || (node.material && node.material.name === "Wings"))) {
+                
                 node.material = node.material.clone();
                 
-                // RIMUOVIAMO LA TEXTURE per avere il colore HEX puro
-                node.material.map = null;
-                node.material.emissiveMap = null;
+                // Manteniamo la texture ma neutralizziamo il colore base a bianco
+                // In questo modo la texture originale non "sporca" il gradiente
+                node.material.color.set("#FFFFFF"); 
+                
+                // Usiamo Emissive per "illuminare" le ali con i tuoi colori HEX
+                node.material.emissiveIntensity = 0.8; 
                 node.material.needsUpdate = true;
                 
                 this.wingMaterials.push(node.material);
@@ -50,22 +55,20 @@
         tick: function (time, timeDelta) {
           if (!this.isReady) return;
 
-          // Incrementa il progresso in base al tempo passato
           this.progress += timeDelta / this.duration;
 
           if (this.progress > 1) {
             this.progress = 0;
-            // Quando ricomincia, cambia altezza e profondità per varietà
             this.posY = Math.random() * 2 + 1;
             this.posZ = (Math.random() - 0.5) * 5;
           }
 
-          // Aggiorna Posizione
+          // Aggiorna Posizione (X: 6 -> -6)
           const currentX = this.startX + (this.endX - this.startX) * this.progress;
           this.el.object3D.position.set(currentX, this.posY, this.posZ);
-          this.el.setAttribute('rotation', '0 -90 0');
+          this.el.object3D.rotation.set(0, -Math.PI / 2, 0); // Ruotate correttamente verso sinistra
 
-          // Calcolo Gradiente (0.0 -> 0.25 fucsia, 0.25 -> 0.75 gradiente, 0.75 -> 1.0 arancione)
+          // LOGICA GRADIENTE (0.0 -> 0.25 FUCSIA, 0.25 -> 0.75 GRADIENTE, 0.75 -> 1.0 ARANCIONE)
           let lerpFactor = 0;
           if (this.progress < 0.25) {
             lerpFactor = 0;
@@ -77,9 +80,9 @@
 
           const targetColor = new THREE.Color().copy(this.colorStart).lerp(this.colorEnd, lerpFactor);
           
-          // Applica il colore
+          // Applica il colore al canale Emissive per farlo brillare sopra la texture
           this.wingMaterials.forEach(mat => {
-            mat.color.copy(targetColor);
+            mat.emissive.copy(targetColor);
           });
         }
       });
@@ -92,15 +95,15 @@
 
       <a-entity id="swarm-container"></a-entity>
 
-      <a-entity light="type: ambient; intensity: 1;"></a-entity>
-      <a-entity light="type: directional; intensity: 0.5; position: 1 1 1"></a-entity>
+      <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
+      <a-entity light="type: directional; intensity: 0.6; position: 1 2 1"></a-entity>
 
       <a-entity camera look-controls></a-entity>
     </a-scene>
 
     <script>
       const container = document.querySelector('#swarm-container');
-      const numButterflies = 60; // 60 è un ottimo bilanciamento tra folla e fluidità
+      const numButterflies = 60; 
 
       for (let i = 0; i < numButterflies; i++) {
         let b = document.createElement('a-entity');
