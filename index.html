@@ -2,42 +2,30 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Farfalle AR - Progroup & Ondulkart</title>
+    <title>Farfalle AR</title>
     <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-    <script src="https://unpkg.com/aframe-text-geometry-component@0.5.1/dist/aframe-text-geometry-component.min.js"></script>
     <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
   </head>
   <body style="margin: 0; overflow: hidden;">
     
     <script>
-      // Componente per gestire il colore delle farfalle
       AFRAME.registerComponent('butterfly-color', {
-        schema: {
-          color: { type: 'color', default: '#ce0058' }
-        },
+        schema: { color: { type: 'color', default: '#ce0058' } },
         init: function () {
-          this.el.addEventListener('model-loaded', () => {
-            this.applyColor();
-          });
+          this.el.addEventListener('model-loaded', () => { this.applyColor(); });
         },
-        update: function () {
-          this.applyColor();
-        },
+        update: function () { this.applyColor(); },
         applyColor: function () {
           const mesh = this.el.getObject3D('mesh');
           if (!mesh) return;
-
           const newColor = new THREE.Color(this.data.color);
-          // Converte il colore per la gestione corretta del renderer
           newColor.convertSRGBToLinear();
-          
           mesh.traverse((node) => {
             if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
               node.material.emissive = newColor; 
-              // Intensità ridotta per evitare l'effetto "bruciato"
-              node.material.emissiveIntensity = 1; 
+              node.material.emissiveIntensity = 10; 
             }
           });
         }
@@ -48,7 +36,6 @@
       
       <a-assets>
         <a-asset-item id="butterflyModel" src="animated_butterfly_fucsia.glb"></a-asset-item>
-        <a-asset-item id="optimerBold" src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/fonts/helvetiker_bold.typeface.json"></a-asset-item>
       </a-assets>
 
       <a-entity id="swarm"></a-entity>
@@ -58,16 +45,30 @@
 
       <a-entity 
         look-at="[camera]"
-        position="18 3.5 -7.5"
-        text-geometry="value: Progroup; size: 1.5; height: 0.3; font: #optimerBold;"
-        material="color: #ffffff; roughness: 0.1; metalness: 0.3; emissive: #ffffff; emissiveIntensity: 0.1;">
+        position="18 3.5 -7.5">
+        <a-text 
+          value="Progroup" 
+          align="center" 
+          width="20" 
+          color="#ffffff"
+          negate="false"
+          shader="msdf"
+          font="https://cdn.aframe.io/fonts/Aileron-Semibold.fnt">
+        </a-text>
       </a-entity>
       
       <a-entity 
         look-at="[camera]"
-        position="-18 3.5 -7.5"
-        text-geometry="value: Ondulkart; size: 1.5; height: 0.3; font: #optimerBold;"
-        material="color: #ffffff; roughness: 0.1; metalness: 0.3; emissive: #ffffff; emissiveIntensity: 0.1;">
+        position="-18 3.5 -7.5">
+        <a-text 
+          value="Ondulkart" 
+          align="center" 
+          width="20" 
+          color="#ffffff"
+          negate="false"
+          shader="msdf"
+          font="https://cdn.aframe.io/fonts/Aileron-Semibold.fnt">
+        </a-text>
       </a-entity>
 
       <a-entity camera look-controls></a-entity>
@@ -80,7 +81,6 @@
       const tHeight = 7;  
       const tWidth = 7;   
 
-      // Griglia anti-collisione
       const rows = 12;
       const cols = 13;
       let grid = [];
