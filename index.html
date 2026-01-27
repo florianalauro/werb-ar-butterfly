@@ -33,7 +33,7 @@
             if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
               node.material.emissive = newColor; 
-              node.material.emissiveIntensity = 20; 
+              node.material.emissiveIntensity = 10; 
               
             }
           });
@@ -86,7 +86,7 @@
         
         butterfly.setAttribute('gltf-model', '#butterflyModel');
         butterfly.setAttribute('animation-mixer', 'clip: Flying');
-        butterfly.setAttribute('scale', '0.25 0.25 0.25');
+        butterfly.setAttribute('scale', '0.4 0.4 0.4');
         butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
         const resetButterfly = (el) => {
