@@ -5,6 +5,8 @@
     <title>Farfalle AR</title>
     <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/aframe-text-geometry-component@0.5.1/dist/aframe-text-geometry-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-look-at-component@0.8.0/dist/aframe-look-at-component.min.js"></script>
   </head>
   <body style="margin: 0; overflow: hidden;">
     
@@ -51,6 +53,20 @@
 
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
       <a-entity light="type: directional; intensity: 1; position: 1 1 1"></a-entity>
+
+      <a-entity 
+        look-at="[camera]"
+        position="18 3.5 -7.5"
+        text-geometry="value: Progroup; size: 1.5; height: 0.2;"
+        material="color: #ffffff; roughness: 0.1; metalness: 0.2; sphericalEnvMap: #sky;">
+      </a-entity>
+      
+      <a-entity 
+        look-at="[camera]"
+        position="-18 3.5 -7.5"
+        text-geometry="value: Ondulkart; size: 1.5; height: 0.2;"
+        material="color: #ffffff; roughness: 0.1; metalness: 0.2; sphericalEnvMap: #sky;">
+      </a-entity>
 
       <a-entity camera look-controls></a-entity>
     </a-scene>
