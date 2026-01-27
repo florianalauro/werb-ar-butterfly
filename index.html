@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Farfalle AR - Tunnel</title>
+    <title>6Farfalle AR - Tunnel</title>
     <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
   </head>
@@ -24,26 +24,27 @@
 
     <script>
       const swarm = document.querySelector('#swarm');
-      const numButterflies = 30; // Numero bilanciato per la fluidità
+      const numButterflies = 50; // Aumentato leggermente per un effetto sciame più denso
 
       for (let i = 0; i < numButterflies; i++) {
         let butterfly = document.createElement('a-entity');
         
         butterfly.setAttribute('gltf-model', '#butterflyModel');
         butterfly.setAttribute('animation-mixer', 'clip: Flying');
-        butterfly.setAttribute('scale', '0.08 0.08 0.08');
+        butterfly.setAttribute('scale', '0.06 0.06 0.06');
 
-        // Funzione per posizionare e muovere la farfalla nel tunnel
         const resetButterfly = (el) => {
-          const startX = 6; // Inizia a destra
-          const randomY = Math.random() * 2 + 1; // Altezza tra 1m e 3m
-          const randomZ = (Math.random() - 0.5) * 4; // Profondità tunnel
-          const duration = Math.random() * 4000 + 6000; // Velocità variabile
+          // X: Le farfalle partono da 6 metri a destra e arrivano a -6 metri a sinistra
+          const startX = 6; 
+          // Y: Altezza variabile tra 1m e 2.5m (altezza occhi)
+          const randomY = Math.random() * 1.5 + 1; 
+          // Z: SPOSTAMENTO FRONTALE. Usiamo valori negativi (da -2 a -5 metri davanti all'utente)
+          const randomZ = -(Math.random() * 3 + 2); 
+          const duration = Math.random() * 4000 + 6000;
           
           el.setAttribute('position', `${startX} ${randomY} ${randomZ}`);
-          el.setAttribute('rotation', '0 -90 0'); // Orientata verso sinistra
+          el.setAttribute('rotation', '0 -90 0'); // Orientate per volare verso sinistra
 
-          // Animazione lineare verso sinistra
           el.setAttribute('animation', {
             property: 'position',
             to: `-6 ${randomY} ${randomZ}`,
@@ -53,16 +54,15 @@
           });
         };
 
-        // Quando finisce il percorso, ricomincia da destra
         butterfly.addEventListener('animationcomplete', () => {
           resetButterfly(butterfly);
         });
 
-        // Partenza scaglionata per evitare l'effetto "muro" iniziale
+        // Partenza scaglionata per creare un flusso continuo
         setTimeout(() => {
           swarm.appendChild(butterfly);
           resetButterfly(butterfly);
-        }, Math.random() * 8000);
+        }, Math.random() * 10000);
       }
     </script>
   </body>
