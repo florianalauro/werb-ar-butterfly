@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Farfalle AR</title>
+    <title>Farfalle AR - Progroup & Ondulkart</title>
     <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <script src="https://unpkg.com/aframe-text-geometry-component@0.5.1/dist/aframe-text-geometry-component.min.js"></script>
@@ -11,6 +11,7 @@
   <body style="margin: 0; overflow: hidden;">
     
     <script>
+      // Componente per gestire il colore delle farfalle
       AFRAME.registerComponent('butterfly-color', {
         schema: {
           color: { type: 'color', default: '#ce0058' }
@@ -28,15 +29,15 @@
           if (!mesh) return;
 
           const newColor = new THREE.Color(this.data.color);
-
+          // Converte il colore per la gestione corretta del renderer
           newColor.convertSRGBToLinear();
           
           mesh.traverse((node) => {
             if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
               node.material.emissive = newColor; 
-              node.material.emissiveIntensity = 10; 
-              
+              // Intensità ridotta per evitare l'effetto "bruciato"
+              node.material.emissiveIntensity = 1; 
             }
           });
         }
@@ -47,7 +48,7 @@
       
       <a-assets>
         <a-asset-item id="butterflyModel" src="animated_butterfly_fucsia.glb"></a-asset-item>
-        <a-asset-item id="optimerBold" src="https://rawgit.com/mrdoob/three.js/master/examples/fonts/helvetiker_bold.typeface.json"></a-asset-item>
+        <a-asset-item id="optimerBold" src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@master/examples/fonts/helvetiker_bold.typeface.json"></a-asset-item>
       </a-assets>
 
       <a-entity id="swarm"></a-entity>
@@ -55,20 +56,18 @@
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
       <a-entity light="type: directional; intensity: 1; position: 1 1 1"></a-entity>
 
-      <a-entity text-geometry="value: Progroup; font: #optimerBold; ..."></a-entity>
-
       <a-entity 
         look-at="[camera]"
         position="18 3.5 -7.5"
-        text-geometry="value: Progroup; size: 1.5; height: 0.2;"
-        material="color: #ffffff; roughness: 0.1; metalness: 0.2; sphericalEnvMap: #sky;">
+        text-geometry="value: Progroup; size: 1.5; height: 0.3; font: #optimerBold;"
+        material="color: #ffffff; roughness: 0.1; metalness: 0.3; emissive: #ffffff; emissiveIntensity: 0.1;">
       </a-entity>
       
       <a-entity 
         look-at="[camera]"
         position="-18 3.5 -7.5"
-        text-geometry="value: Ondulkart; size: 1.5; height: 0.2;"
-        material="color: #ffffff; roughness: 0.1; metalness: 0.2; sphericalEnvMap: #sky;">
+        text-geometry="value: Ondulkart; size: 1.5; height: 0.3; font: #optimerBold;"
+        material="color: #ffffff; roughness: 0.1; metalness: 0.3; emissive: #ffffff; emissiveIntensity: 0.1;">
       </a-entity>
 
       <a-entity camera look-controls></a-entity>
@@ -77,13 +76,11 @@
     <script>
       const swarm = document.querySelector('#swarm');
       const numButterflies = 150;
+      const tLength = 20; 
+      const tHeight = 7;  
+      const tWidth = 7;   
 
-      const tLength = 20; // Lunghezza (Asse X)
-      const tHeight = 7;  // Altezza (Asse Y)
-      const tWidth = 7;   // Larghezza (Asse Z)
-
-      // Logica Anti-Collisione: creazione di una griglia di slot Y/Z (corsie di volo)
-      // 12 righe x 13 colonne = 156 slot (sufficienti per 150 farfalle)
+      // Griglia anti-collisione
       const rows = 12;
       const cols = 13;
       let grid = [];
@@ -91,17 +88,15 @@
         for (let c = 0; c < cols; c++) {
           grid.push({
             y: (r / (rows - 1)) * tHeight, 
-            // Posizionamento frontale: la larghezza è centrata e spostata davanti alla camera
             z: -((c / (cols - 1)) * tWidth + 4) 
           });
         }
       }
-      // Mischia la griglia per una distribuzione più naturale
       grid.sort(() => Math.random() - 0.5);
 
       for (let i = 0; i < numButterflies; i++) {
         let butterfly = document.createElement('a-entity');
-        const slot = grid[i % grid.length]; // Assegna uno slot fisso per evitare collisioni
+        const slot = grid[i % grid.length]; 
         
         butterfly.setAttribute('gltf-model', '#butterflyModel');
         butterfly.setAttribute('animation-mixer', 'clip: Flying');
@@ -109,10 +104,8 @@
         butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
         const resetButterfly = (el) => {
-          
           const startX = tLength;
           const endX = -(tLength);
-          
           const posY = slot.y;
           const posZ = slot.z;
           const moveDuration = Math.random() * 4000 + 8000;
