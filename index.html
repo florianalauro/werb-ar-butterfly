@@ -11,7 +11,7 @@
     <script>
       AFRAME.registerComponent('butterfly-color', {
         schema: {
-          color: { type: 'color', default: '#7f194f' }
+          color: { type: 'color', default: '#961e46' }
         },
         init: function () {
           this.el.addEventListener('model-loaded', () => {
@@ -84,7 +84,7 @@
         butterfly.setAttribute('gltf-model', '#butterflyModel');
         butterfly.setAttribute('animation-mixer', 'clip: Flying');
         butterfly.setAttribute('scale', '0.25 0.25 0.25');
-        butterfly.setAttribute('butterfly-color', 'color: #7f194f');
+        butterfly.setAttribute('butterfly-color', 'color: #961e46');
 
         const resetButterfly = (el) => {
           
@@ -108,7 +108,7 @@
 
           el.setAttribute('animation__color', {
             property: 'butterfly-color.color',
-            from: '#7f194f',
+            from: '#961e46',
             to: '#7f3619',
             dur: colorDuration,
             easing: 'easeInQuad',
