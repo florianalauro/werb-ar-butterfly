@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Farfalle AR</title>
+    <title>Farfalle AR - Tunnel</title>
     <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
   </head>
@@ -14,9 +14,7 @@
           color: { type: 'color', default: '#ce0058' }
         },
         init: function () {
-          this.el.addEventListener('model-loaded', () => {
-            this.applyColor();
-          });
+          this.el.addEventListener('model-loaded', () => this.applyColor());
         },
         update: function () {
           this.applyColor();
@@ -24,25 +22,21 @@
         applyColor: function () {
           const mesh = this.el.getObject3D('mesh');
           if (!mesh) return;
-
           const newColor = new THREE.Color(this.data.color);
           
           mesh.traverse((node) => {
-            // FILTRO: Agisce solo se il materiale si chiama "Wings"
             if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
-              
               // Effetto brillantezza (Emissivo)
               node.material.emissive = newColor; 
               node.material.emissiveIntensity = 5; // Più alto = più brillante
-              
             }
           });
         }
       });
     </script>
 
-    <a-scene renderer="colorManagement: true; exposure: 1.3;" xr-mode-ui="enabled: true">
+    <a-scene renderer="colorManagement: true; exposure: 1.2;" xr-mode-ui="enabled: true">
       
       <a-assets>
         <a-asset-item id="butterflyModel" src="animated_butterfly_fucsia.glb"></a-asset-item>
@@ -50,61 +44,81 @@
 
       <a-entity id="swarm"></a-entity>
 
-      <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
-      <a-entity light="type: directional; intensity: 1; position: 1 1 1"></a-entity>
+      <a-entity light="type: ambient; intensity: 0.8;"></a-entity>
+      <a-entity light="type: directional; intensity: 1.5; position: 1 4 2"></a-entity>
 
-      <a-entity camera look-controls></a-entity>
+      <a-entity camera look-controls position="0 1.6 0"></a-entity>
     </a-scene>
 
     <script>
       const swarm = document.querySelector('#swarm');
       const numButterflies = 150;
+      
+      // Dimensioni tunnel
+      const tLength = 10; // X
+      const tWidth = 7;  // Z
+      const tHeight = 7; // Y
+
+      // Sistema a griglia per evitare collisioni (12x13 = 156 slot)
+      let slots = [];
+      for (let y = 0; y < 12; y++) {
+        for (let z = 0; z < 13; z++) {
+          slots.push({
+            y: (y / 12) * tHeight,
+            z: (z / 13) * tWidth - (tWidth / 2)
+          });
+        }
+      }
+      // Mescoliamo gli slot per un look naturale
+      slots.sort(() => Math.random() - 0.5);
 
       for (let i = 0; i < numButterflies; i++) {
         let butterfly = document.createElement('a-entity');
+        const slot = slots[i];
         
         butterfly.setAttribute('gltf-model', '#butterflyModel');
         butterfly.setAttribute('animation-mixer', 'clip: Flying');
         butterfly.setAttribute('scale', '0.15 0.15 0.15');
         butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-        const resetButterfly = (el) => {
-          const startX = 6; 
-          const randomY = Math.random() * 1.5 + 1; 
-          const randomZ = -(Math.random() * 3 + 2); 
-          const moveDuration = Math.random() * 4000 + 8000;
+        const resetButterfly = (el, isFirstSpawn) => {
+          // Se è il primo spawn, le distribuiamo lungo tutta la X del tunnel
+          // Se è un reset, partono tutte dal fondo (X=5)
+          const startX = isFirstSpawn ? (Math.random() * tLength - tLength/2) : (tLength / 2);
+          const endX = -(tLength / 2);
           
-          // Cambio colore (60% della durata del volo)
-          const colorDuration = moveDuration * 0.6; 
+          const posY = slot.y + (Math.random() * 0.2); // Jitter per non sembrare robotica
+          const posZ = slot.z + (Math.random() * 0.2);
+          const duration = Math.random() * 3000 + 7000;
 
-          el.setAttribute('position', `${startX} ${randomY} ${randomZ}`);
-          el.setAttribute('rotation', '0 -90 0');
+          el.setAttribute('position', `${startX} ${posY} ${posZ}`);
+          el.setAttribute('rotation', `0 -90 ${Math.random() * 20 - 10}`);
 
+          // Animazione Movimento
           el.setAttribute('animation__move', {
             property: 'position',
-            to: `-6 ${randomY} ${randomZ}`,
-            dur: moveDuration,
+            to: `${endX} ${posY} ${posZ}`,
+            dur: isFirstSpawn ? (duration * ((startX + 5)/10)) : duration,
             easing: 'linear'
           });
 
+          // Animazione Colore (finisce al 60% del percorso)
           el.setAttribute('animation__color', {
             property: 'butterfly-color.color',
             from: '#ce0058',
             to: '#fe5000',
-            dur: colorDuration,
-            easing: 'easeInQuad',
-            loop: false
+            dur: duration * 0.6,
+            easing: 'easeInQuad'
           });
         };
 
         butterfly.addEventListener('animationcomplete__move', () => {
-          resetButterfly(butterfly);
+          resetButterfly(butterfly, false);
         });
 
-        setTimeout(() => {
-          swarm.appendChild(butterfly);
-          resetButterfly(butterfly);
-        }, Math.random() * 10000);
+        // Spawn immediato senza sovrapposizioni
+        swarm.appendChild(butterfly);
+        resetButterfly(butterfly, true);
       }
     </script>
   </body>
