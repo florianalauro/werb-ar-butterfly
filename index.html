@@ -2,29 +2,32 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Sciame Farfalle AR - Gradiente Ali</title>
+    <title>Farfalle AR</title>
     <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
   </head>
   <body style="margin: 0; overflow: hidden;">
     
     <script>
-      // Definiamo i colori richiesti
-      const COLOR_START = new THREE.Color("#CE0058"); // FUCSIA
-      const COLOR_END = new THREE.Color("#FE5000");   // ARANCIONE
+      // Definiamo i colori richiesti con i codici HEX esatti
+      const HEX_FUCSIA = "#CE0058";
+      const HEX_ARANCIONE = "#FE5000";
 
       AFRAME.registerComponent('butterfly-logic', {
         init: function () {
           this.wingMaterials = [];
+          this.colorStart = new THREE.Color(HEX_FUCSIA);
+          this.colorEnd = new THREE.Color(HEX_ARANCIONE);
           
-          // Attendiamo il caricamento del modello
           this.el.addEventListener('model-loaded', () => {
             const mesh = this.el.getObject3D('mesh');
             mesh.traverse(node => {
               // Applichiamo il cambio solo al materiale chiamato "Wings"
               if (node.isMesh && node.material && node.material.name === "Wings") {
-                // CLONAZIONE: fondamentale per avere colori diversi per ogni farfalla
+                // CLONAZIONE: Indispensabile per far sì che ogni farfalla abbia il suo colore
                 node.material = node.material.clone();
+                // Assicuriamoci che il materiale risponda correttamente alle luci
+                node.material.needsUpdate = true;
                 this.wingMaterials.push(node.material);
               }
             });
@@ -33,13 +36,13 @@
         },
 
         reset: function () {
-          // Configurazione Tunnel (da destra a sinistra)
+          // Tunnel: da destra (X=6) a sinistra (X=-6)
           this.startX = 6; 
           this.endX = -6;
           this.posY = Math.random() * 2 + 1; 
-          this.posZ = (Math.random() - 0.5) * 4;
-          this.duration = Math.random() * 5000 + 5000;
-          this.startTime = Date.now() + Math.random() * 5000; // Delay casuale iniziale
+          this.posZ = (Math.random() - 0.5) * 5;
+          this.duration = Math.random() * 4000 + 6000;
+          this.startTime = Date.now() + Math.random() * 5000;
 
           this.el.object3D.position.set(this.startX, this.posY, this.posZ);
           this.el.setAttribute('rotation', '0 -90 0');
@@ -48,27 +51,34 @@
 
         tick: function () {
           const now = Date.now();
-          if (now < this.startTime) return;
+          if (now < this.startTime || this.wingMaterials.length === 0) return;
 
           let elapsed = now - this.startTime;
           let progress = elapsed / this.duration;
 
           if (progress > 1) {
-            this.reset(); // Ricomincia il ciclo
+            this.reset();
             return;
           }
 
-          // Movimento lineare da destra a sinistra
-          const currentX = this.startX + (this.endX - this.startX) * progress;
-          this.el.object3D.position.x = currentX;
+          // Movimento lineare
+          this.el.object3D.position.x = this.startX + (this.endX - this.startX) * progress;
 
-          // Gestione GRADIENTE MORBIDO
-          // Creiamo un nuovo colore temporaneo basato sul progresso
-          let currentColor = new THREE.Color().copy(COLOR_START).lerp(COLOR_END, progress);
+          // LOGICA GRADIENTE (1/4 -> 3/4)
+          let lerpFactor = 0;
+          if (progress < 0.25) {
+            lerpFactor = 0; // Tutto Fucsia
+          } else if (progress > 0.75) {
+            lerpFactor = 1; // Tutto Arancione
+          } else {
+            // Calcolo gradiente morbido nel range centrale
+            lerpFactor = (progress - 0.25) / 0.5;
+          }
 
-          // Applichiamo il colore solo alle ali
+          // Applichiamo il colore interpolato
+          const targetColor = new THREE.Color().copy(this.colorStart).lerp(this.colorEnd, lerpFactor);
           this.wingMaterials.forEach(mat => {
-            mat.color.copy(currentColor);
+            mat.color.copy(targetColor);
           });
         }
       });
@@ -81,14 +91,16 @@
 
       <a-entity id="swarm-container"></a-entity>
 
+      <a-entity light="type: ambient; intensity: 0.8;"></a-entity>
+      <a-entity light="type: directional; intensity: 0.5; position: 1 1 1"></a-entity>
+
       <a-entity camera look-controls></a-entity>
     </a-scene>
 
     <script>
       const container = document.querySelector('#swarm-container');
-      // 500 farfalle potrebbero bloccare il browser mobile. 
-      // Inizia con 50 per testare il gradiente, poi aumenta.
-      const numButterflies = 60; 
+      
+      const numButterflies = 50; 
 
       for (let i = 0; i < numButterflies; i++) {
         let b = document.createElement('a-entity');
