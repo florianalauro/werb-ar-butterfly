@@ -9,7 +9,7 @@
   <body style="margin: 0; overflow: hidden;">
     
     <script>
-      // Colori richiesti dall'utente
+      // I tuoi colori esadecimali esatti
       const HEX_FUCSIA = "#CE0058";
       const HEX_ARANCIONE = "#FE5000";
 
@@ -22,65 +22,75 @@
           // Parametri del tunnel
           this.startX = 6; 
           this.endX = -6;
-          this.posY = Math.random() * 2 + 1; 
-          this.posZ = (Math.random() - 0.5) * 5;
-          this.duration = Math.random() * 4000 + 6000;
-          
-          // Distribuzione istantanea nel tunnel
+          // Distribuzione iniziale casuale per movimento immediato
           this.progress = Math.random();
+          this.isReady = false;
 
           this.el.addEventListener('model-loaded', () => {
             const mesh = this.el.getObject3D('mesh');
             mesh.traverse(node => {
-              // Identifichiamo le ali (Object_0/1 o materiale Wings)
-              if (node.isMesh && (node.name.includes("Object_0") || node.name.includes("Object_1") || (node.material && node.material.name === "Wings"))) {
-                
-                node.material = node.material.clone();
-                
-                // Manteniamo la texture ma neutralizziamo il colore base a bianco
-                // In questo modo la texture originale non "sporca" il gradiente
-                node.material.color.set("#FFFFFF"); 
-                
-                // Usiamo Emissive per "illuminare" le ali con i tuoi colori HEX
-                node.material.emissiveIntensity = 0.8; 
-                node.material.needsUpdate = true;
-                
-                this.wingMaterials.push(node.material);
+              if (node.isMesh && node.material) {
+                // --- LOGICA DI SELEZIONE ---
+                // Identifichiamo se questa parte è un'ALA o il CORPO
+                const isWing = node.name.includes("Object_7") || node.name.includes("Object_9") || node.material.name === "Wings";
+
+                if (isWing) {
+                  // *** TRATTAMENTO ALI ***
+                  node.material = node.material.clone(); // Materiale unico per questa farfalla
+                  // Impostiamo il colore base a bianco per non alterare il gradiente
+                  node.material.color.set("#FFFFFF"); 
+                  // Attiviamo l'emissione per far brillare il colore HEX sopra la texture
+                  node.material.emissiveIntensity = 0.9; 
+                  node.material.needsUpdate = true;
+                  this.wingMaterials.push(node.material);
+                } else {
+                  // *** TRATTAMENTO CORPO ***
+                  // Non facciamo NULLA. Il corpo manterrà la sua texture originale.
+                  // Aumentiamo solo un po' la rugosità per non farlo sembrare plastica lucida.
+                  node.material.roughness = 0.8;
+                }
               }
             });
+            // Applichiamo la scala iniziale appena caricato
+            this.el.setAttribute('scale', '0.1 0.1 0.1');
+            this.resetParams(); // Imposta posizioni iniziali
             this.isReady = true;
           });
+        },
+
+        resetParams: function () {
+            this.posY = Math.random() * 2 + 0.5; // Altezza varie
+            this.posZ = (Math.random() - 0.5) * 5; // Profondità tunnel
+            this.duration = Math.random() * 4000 + 6000; // Velocità diverse
         },
 
         tick: function (time, timeDelta) {
           if (!this.isReady) return;
 
+          // Avanzamento del progresso
           this.progress += timeDelta / this.duration;
 
+          // Se arriva in fondo, ricomincia dall'inizio con nuovi parametri
           if (this.progress > 1) {
             this.progress = 0;
-            this.posY = Math.random() * 2 + 1;
-            this.posZ = (Math.random() - 0.5) * 5;
+            this.resetParams();
           }
 
-          // Aggiorna Posizione (X: 6 -> -6)
+          // 1. MOVIMENTO & ROTAZIONE
           const currentX = this.startX + (this.endX - this.startX) * this.progress;
           this.el.object3D.position.set(currentX, this.posY, this.posZ);
-          this.el.object3D.rotation.set(0, -Math.PI / 2, 0); // Ruotate correttamente verso sinistra
+          // Ruotate per guardare verso sinistra
+          this.el.object3D.rotation.set(0, -Math.PI / 2, 0); 
 
-          // LOGICA GRADIENTE (0.0 -> 0.25 FUCSIA, 0.25 -> 0.75 GRADIENTE, 0.75 -> 1.0 ARANCIONE)
+          // 2. CALCOLO GRADIENTE CROMATICO (Solo per le ali)
           let lerpFactor = 0;
-          if (this.progress < 0.25) {
-            lerpFactor = 0;
-          } else if (this.progress > 0.75) {
-            lerpFactor = 1;
-          } else {
-            lerpFactor = (this.progress - 0.25) / 0.5;
-          }
+          if (this.progress < 0.25) { lerpFactor = 0; } // Inizio Fucsia
+          else if (this.progress > 0.75) { lerpFactor = 1; } // Fine Arancione
+          else { lerpFactor = (this.progress - 0.25) / 0.5; } // Sfumatura centrale
 
           const targetColor = new THREE.Color().copy(this.colorStart).lerp(this.colorEnd, lerpFactor);
           
-          // Applica il colore al canale Emissive per farlo brillare sopra la texture
+          // Applica il colore solo ai materiali identificati come ALI
           this.wingMaterials.forEach(mat => {
             mat.emissive.copy(targetColor);
           });
@@ -88,27 +98,29 @@
       });
     </script>
 
-    <a-scene renderer="colorManagement: true;" xr-mode-ui="enabled: true" webxr="optionalFeatures: hit-test;">
+    <a-scene renderer="colorManagement: true; physicallyCorrectLights: true;" xr-mode-ui="enabled: true" webxr="optionalFeatures: hit-test;">
       <a-assets>
         <a-asset-item id="butterflyModel" src="animated_butterfly.glb"></a-asset-item>
       </a-assets>
 
       <a-entity id="swarm-container"></a-entity>
 
-      <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
-      <a-entity light="type: directional; intensity: 0.6; position: 1 2 1"></a-entity>
+      <a-entity light="type: ambient; intensity: 1.5; color: #ffffff"></a-entity>
+      <a-entity light="type: directional; intensity: 1; position: -1 2 1; castShadow: false"></a-entity>
 
       <a-entity camera look-controls></a-entity>
     </a-scene>
 
     <script>
       const container = document.querySelector('#swarm-container');
+      // Numero di farfalle (60 è ottimale per la maggior parte dei telefoni)
       const numButterflies = 60; 
 
       for (let i = 0; i < numButterflies; i++) {
         let b = document.createElement('a-entity');
         b.setAttribute('gltf-model', '#butterflyModel');
-        b.setAttribute('animation-mixer', 'clip: Flying');
+        // Avvia l'animazione di volo in loop
+        b.setAttribute('animation-mixer', 'clip: Flying; loop: repeat; timeScale: ' + (Math.random() * 0.5 + 0.8)); 
         b.setAttribute('butterfly-logic', ''); 
         container.appendChild(b);
       }
