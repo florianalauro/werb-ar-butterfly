@@ -47,12 +47,15 @@
       
       <a-assets>
         <a-asset-item id="butterflyModel" src="animated_butterfly_fucsia.glb"></a-asset-item>
+        <a-asset-item id="optimerBold" src="https://rawgit.com/mrdoob/three.js/master/examples/fonts/helvetiker_bold.typeface.json"></a-asset-item>
       </a-assets>
 
       <a-entity id="swarm"></a-entity>
 
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
       <a-entity light="type: directional; intensity: 1; position: 1 1 1"></a-entity>
+
+      <a-entity text-geometry="value: Progroup; font: #optimerBold; ..."></a-entity>
 
       <a-entity 
         look-at="[camera]"
