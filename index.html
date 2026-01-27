@@ -9,82 +9,77 @@
   <body style="margin: 0; overflow: hidden;">
     
     <script>
-      // Esadecimali richiesti
-      const COLOR_FUCSIA = "#CE0058";
-      const COLOR_ARANCIONE = "#FE5000";
+      const HEX_FUCSIA = "#CE0058";
+      const HEX_ARANCIONE = "#FE5000";
 
       AFRAME.registerComponent('butterfly-logic', {
         init: function () {
           this.wingMaterials = [];
-          this.cStart = new THREE.Color(COLOR_FUCSIA);
-          this.cEnd = new THREE.Color(COLOR_ARANCIONE);
+          this.colorStart = new THREE.Color(HEX_FUCSIA);
+          this.colorEnd = new THREE.Color(HEX_ARANCIONE);
           
-          this.el.addEventListener('model-loaded', () => {
-            const mesh = this.el.getObject3D('mesh');
-            mesh.traverse(node => {
-              // Cerchiamo specificamente le mesh delle ali Object_0 e Object_1 o il materiale Wings
-              if (node.isMesh && (node.name.includes("Object_7") || node.name.includes("Object_9") || (node.material && node.material.name === "Wings"))) {
-                
-                // CLONAZIONE: Creiamo un materiale unico per questa farfalla
-                node.material = node.material.clone();
-                
-                // FORZIAMO le proprietà per rendere visibile il colore sopra la texture
-                node.material.color.set("#ffffff"); // Base bianca per non scurire il gradiente
-                node.material.emissiveIntensity = 1; // Accendiamo il colore
-                
-                this.wingMaterials.push(node.material);
-              }
-            });
-            this.reset();
-          });
-        },
-
-        reset: function () {
-          // Posizione di partenza (Destra)
+          // Parametri del tunnel
           this.startX = 6; 
           this.endX = -6;
           this.posY = Math.random() * 2 + 1; 
           this.posZ = (Math.random() - 0.5) * 5;
           this.duration = Math.random() * 4000 + 6000;
-          this.startTime = Date.now() + Math.random() * 5000;
+          
+          // IMPORTANTE: Progresso casuale così il tunnel è già pieno
+          this.progress = Math.random();
 
-          this.el.object3D.position.set(this.startX, this.posY, this.posZ);
-          this.el.setAttribute('rotation', '0 -90 0');
-          this.el.setAttribute('scale', '0.1 0.1 0.1');
+          this.el.addEventListener('model-loaded', () => {
+            const mesh = this.el.getObject3D('mesh');
+            mesh.traverse(node => {
+              // Target: materiale "Wings" (Object_7 e Object_9)
+              if (node.isMesh && node.material && node.material.name === "Wings") {
+                node.material = node.material.clone();
+                
+                // RIMUOVIAMO LA TEXTURE per avere il colore HEX puro
+                node.material.map = null;
+                node.material.emissiveMap = null;
+                node.material.needsUpdate = true;
+                
+                this.wingMaterials.push(node.material);
+              }
+            });
+            this.isReady = true;
+          });
         },
 
-        tick: function () {
-          const now = Date.now();
-          if (now < this.startTime || this.wingMaterials.length === 0) return;
+        tick: function (time, timeDelta) {
+          if (!this.isReady) return;
 
-          let elapsed = now - this.startTime;
-          let progress = elapsed / this.duration;
+          // Incrementa il progresso in base al tempo passato
+          this.progress += timeDelta / this.duration;
 
-          if (progress > 1) {
-            this.reset();
-            return;
+          if (this.progress > 1) {
+            this.progress = 0;
+            // Quando ricomincia, cambia altezza e profondità per varietà
+            this.posY = Math.random() * 2 + 1;
+            this.posZ = (Math.random() - 0.5) * 5;
           }
 
-          // Muovi la farfalla verso sinistra
-          this.el.object3D.position.x = this.startX + (this.endX - this.startX) * progress;
+          // Aggiorna Posizione
+          const currentX = this.startX + (this.endX - this.startX) * this.progress;
+          this.el.object3D.position.set(currentX, this.posY, this.posZ);
+          this.el.setAttribute('rotation', '0 -90 0');
 
-          // LOGICA GRADIENTE (Inizia a 0.25, finisce a 0.75)
+          // Calcolo Gradiente (0.0 -> 0.25 fucsia, 0.25 -> 0.75 gradiente, 0.75 -> 1.0 arancione)
           let lerpFactor = 0;
-          if (progress < 0.25) {
+          if (this.progress < 0.25) {
             lerpFactor = 0;
-          } else if (progress > 0.75) {
+          } else if (this.progress > 0.75) {
             lerpFactor = 1;
           } else {
-            lerpFactor = (progress - 0.25) / 0.5;
+            lerpFactor = (this.progress - 0.25) / 0.5;
           }
 
-          // Calcoliamo il colore corrente
-          const currentC = new THREE.Color().copy(this.cStart).lerp(this.cEnd, lerpFactor);
-
-          // Applichiamo il colore sia alla diffusione che all'emissione (per brillare)
+          const targetColor = new THREE.Color().copy(this.colorStart).lerp(this.colorEnd, lerpFactor);
+          
+          // Applica il colore
           this.wingMaterials.forEach(mat => {
-            mat.color.copy(currentC);
-            mat.emissive.copy(currentC);
+            mat.color.copy(targetColor);
           });
         }
       });
@@ -97,21 +92,20 @@
 
       <a-entity id="swarm-container"></a-entity>
 
-      <a-entity light="type: ambient; intensity: 0.7;"></a-entity>
-      <a-entity light="type: directional; intensity: 0.6; position: 1 2 1"></a-entity>
+      <a-entity light="type: ambient; intensity: 1;"></a-entity>
+      <a-entity light="type: directional; intensity: 0.5; position: 1 1 1"></a-entity>
 
       <a-entity camera look-controls></a-entity>
     </a-scene>
 
     <script>
       const container = document.querySelector('#swarm-container');
-      const numButterflies = 50; // Inizia con 50 per testare la fluidità
+      const numButterflies = 60; // 60 è un ottimo bilanciamento tra folla e fluidità
 
       for (let i = 0; i < numButterflies; i++) {
         let b = document.createElement('a-entity');
         b.setAttribute('gltf-model', '#butterflyModel');
-        // animation-mixer gestisce l'animazione "Flying" contenuta nel file
-        b.setAttribute('animation-mixer', 'clip: Flying; loop: repeat');
+        b.setAttribute('animation-mixer', 'clip: Flying');
         b.setAttribute('butterfly-logic', ''); 
         container.appendChild(b);
       }
