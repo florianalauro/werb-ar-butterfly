@@ -9,25 +9,29 @@
   <body style="margin: 0; overflow: hidden;">
     
     <script>
-      // Definiamo i colori richiesti con i codici HEX esatti
-      const HEX_FUCSIA = "#CE0058";
-      const HEX_ARANCIONE = "#FE5000";
+      // Esadecimali richiesti
+      const COLOR_FUCSIA = "#CE0058";
+      const COLOR_ARANCIONE = "#FE5000";
 
       AFRAME.registerComponent('butterfly-logic', {
         init: function () {
           this.wingMaterials = [];
-          this.colorStart = new THREE.Color(HEX_FUCSIA);
-          this.colorEnd = new THREE.Color(HEX_ARANCIONE);
+          this.cStart = new THREE.Color(COLOR_FUCSIA);
+          this.cEnd = new THREE.Color(COLOR_ARANCIONE);
           
           this.el.addEventListener('model-loaded', () => {
             const mesh = this.el.getObject3D('mesh');
             mesh.traverse(node => {
-              // Applichiamo il cambio solo al materiale chiamato "Wings"
-              if (node.isMesh && node.material && node.material.name === "Wings") {
-                // CLONAZIONE: Indispensabile per far sì che ogni farfalla abbia il suo colore
+              // Cerchiamo specificamente le mesh delle ali Object_0 e Object_1 o il materiale Wings
+              if (node.isMesh && (node.name.includes("Object_0") || node.name.includes("Object_1") || (node.material && node.material.name === "Wings"))) {
+                
+                // CLONAZIONE: Creiamo un materiale unico per questa farfalla
                 node.material = node.material.clone();
-                // Assicuriamoci che il materiale risponda correttamente alle luci
-                node.material.needsUpdate = true;
+                
+                // FORZIAMO le proprietà per rendere visibile il colore sopra la texture
+                node.material.color.set("#ffffff"); // Base bianca per non scurire il gradiente
+                node.material.emissiveIntensity = 1; // Accendiamo il colore
+                
                 this.wingMaterials.push(node.material);
               }
             });
@@ -36,7 +40,7 @@
         },
 
         reset: function () {
-          // Tunnel: da destra (X=6) a sinistra (X=-6)
+          // Posizione di partenza (Destra)
           this.startX = 6; 
           this.endX = -6;
           this.posY = Math.random() * 2 + 1; 
@@ -61,24 +65,26 @@
             return;
           }
 
-          // Movimento lineare
+          // Muovi la farfalla verso sinistra
           this.el.object3D.position.x = this.startX + (this.endX - this.startX) * progress;
 
-          // LOGICA GRADIENTE (1/4 -> 3/4)
+          // LOGICA GRADIENTE (Inizia a 0.25, finisce a 0.75)
           let lerpFactor = 0;
           if (progress < 0.25) {
-            lerpFactor = 0; // Tutto Fucsia
+            lerpFactor = 0;
           } else if (progress > 0.75) {
-            lerpFactor = 1; // Tutto Arancione
+            lerpFactor = 1;
           } else {
-            // Calcolo gradiente morbido nel range centrale
             lerpFactor = (progress - 0.25) / 0.5;
           }
 
-          // Applichiamo il colore interpolato
-          const targetColor = new THREE.Color().copy(this.colorStart).lerp(this.colorEnd, lerpFactor);
+          // Calcoliamo il colore corrente
+          const currentC = new THREE.Color().copy(this.cStart).lerp(this.cEnd, lerpFactor);
+
+          // Applichiamo il colore sia alla diffusione che all'emissione (per brillare)
           this.wingMaterials.forEach(mat => {
-            mat.color.copy(targetColor);
+            mat.color.copy(currentC);
+            mat.emissive.copy(currentC);
           });
         }
       });
@@ -91,21 +97,21 @@
 
       <a-entity id="swarm-container"></a-entity>
 
-      <a-entity light="type: ambient; intensity: 0.8;"></a-entity>
-      <a-entity light="type: directional; intensity: 0.5; position: 1 1 1"></a-entity>
+      <a-entity light="type: ambient; intensity: 0.7;"></a-entity>
+      <a-entity light="type: directional; intensity: 0.6; position: 1 2 1"></a-entity>
 
       <a-entity camera look-controls></a-entity>
     </a-scene>
 
     <script>
       const container = document.querySelector('#swarm-container');
-      
-      const numButterflies = 50; 
+      const numButterflies = 50; // Inizia con 50 per testare la fluidità
 
       for (let i = 0; i < numButterflies; i++) {
         let b = document.createElement('a-entity');
         b.setAttribute('gltf-model', '#butterflyModel');
-        b.setAttribute('animation-mixer', 'clip: Flying');
+        // animation-mixer gestisce l'animazione "Flying" contenuta nel file
+        b.setAttribute('animation-mixer', 'clip: Flying; loop: repeat');
         b.setAttribute('butterfly-logic', ''); 
         container.appendChild(b);
       }
