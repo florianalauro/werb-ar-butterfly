@@ -34,7 +34,9 @@
               
               // Effetto brillantezza (Emissivo)
               node.material.emissive = newColor; 
-              node.material.emissiveIntensity = 0.8; // Più alto = più brillante
+              node.material.emissiveIntensity = 0.4; // Più alto = più brillante
+              node.material.roughness = 0.4; // Più basso è, più è lucido
+              node.material.metalness = 0.2; // Aggiunge un leggero riflesso strutturale
             }
           });
         }
