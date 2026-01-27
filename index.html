@@ -24,7 +24,7 @@
 
     <script>
       const swarm = document.querySelector('#swarm');
-      const numButterflies = 50; // Aumentato leggermente per un effetto sciame più denso
+      const numButterflies = 150; // Aumentato leggermente per un effetto sciame più denso
 
       for (let i = 0; i < numButterflies; i++) {
         let butterfly = document.createElement('a-entity');
@@ -40,7 +40,7 @@
           const randomY = Math.random() * 1.5 + 1; 
           // Z: SPOSTAMENTO FRONTALE. Usiamo valori negativi (da -2 a -5 metri davanti all'utente)
           const randomZ = -(Math.random() * 3 + 2); 
-          const duration = Math.random() * 4000 + 6000;
+          const duration = Math.random() * 4000 + 8000;
           
           el.setAttribute('position', `${startX} ${randomY} ${randomZ}`);
           el.setAttribute('rotation', '0 -90 0'); // Orientate per volare verso sinistra
