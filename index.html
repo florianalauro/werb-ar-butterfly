@@ -15,31 +15,33 @@
         },
         init: function () {
           this.el.addEventListener('model-loaded', () => {
-            this.updateColor();
+            this.applyColor();
           });
         },
         update: function () {
-          this.updateColor();
+          this.applyColor();
         },
-        updateColor: function () {
+        applyColor: function () {
           const mesh = this.el.getObject3D('mesh');
           if (!mesh) return;
 
           const newColor = new THREE.Color(this.data.color);
           
           mesh.traverse((node) => {
-            if (node.isMesh && node.material) {
-              // Applichiamo il colore sia alla base che all'emissivo per la massima brillantezza
+            // FILTRO: Agisce solo se il materiale si chiama "Wings"
+            if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
+              
+              // Effetto brillantezza (Emissivo)
               node.material.emissive = newColor; 
-              node.material.emissiveIntensity = 0.5; // Regola da 0 a 1 per la "luminosità"
+              node.material.emissiveIntensity = 0.8; // Più alto = più brillante
             }
           });
         }
       });
     </script>
 
-    <a-scene renderer="colorManagement: true; exposure: 1.2;" xr-mode-ui="enabled: true">
+    <a-scene renderer="colorManagement: true; exposure: 1.3;" xr-mode-ui="enabled: true">
       
       <a-assets>
         <a-asset-item id="butterflyModel" src="animated_butterfly_fucsia.glb"></a-asset-item>
@@ -71,8 +73,8 @@
           const randomZ = -(Math.random() * 3 + 2); 
           const moveDuration = Math.random() * 4000 + 8000;
           
-          // Il colore cambia in metà tempo rispetto al volo (fucsia -> arancio veloce)
-          const colorDuration = moveDuration * 0.5; 
+          // Cambio colore ancora più anticipato (40% della durata del volo)
+          const colorDuration = moveDuration * 0.4; 
 
           el.setAttribute('position', `${startX} ${randomY} ${randomZ}`);
           el.setAttribute('rotation', '0 -90 0');
@@ -88,8 +90,8 @@
             property: 'butterfly-color.color',
             from: '#ce0058',
             to: '#fe5000',
-            dur: colorDuration, // Qui avviene il cambio anticipato
-            easing: 'easeInCubic', // Rende il passaggio finale più netto
+            dur: colorDuration,
+            easing: 'easeInQuad',
             loop: false
           });
         };
