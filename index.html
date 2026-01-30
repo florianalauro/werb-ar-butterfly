@@ -49,7 +49,7 @@
           mesh.traverse((node) => {
             if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
-              node.material.emissive(newColor); 
+              node.material.emissive.copy(newColor); 
               node.material.emissiveIntensity = 15;        
             }
           });
@@ -92,7 +92,7 @@
       const numButterflies = 150; // Ridotto a 100 per maggiore fluidità su mobile
       const tLength = 20; 
       const tHeight = 7;  
-      const tWidth = ;
+      const tWidth = 7;
 
       const rows = 12;
       const cols = 13;
