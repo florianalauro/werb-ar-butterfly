@@ -5,32 +5,44 @@
     <title>Farfalle AR</title>
     <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    <style>
+      #overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); color: white;
+        display: flex; flex-direction: column; justify-content: center;
+        align-items: center; z-index: 1000; font-family: sans-serif; text-align: center;
+      }
+      .icon { width: 80px; height: 80px; border: 2px solid white; border-radius: 10px; margin-bottom: 20px; position: relative; }
+      .icon::after { content: ''; position: absolute; top: 10px; left: 50%; width: 2px; height: 60px; background: #ce0058; transform: translateX(-50%); }
+      .hidden { display: none !important; }
+      #status { color: #ce0058; font-weight: bold; margin-top: 10px; }
+    </style>
   </head>
 
   <body style="margin: 0; overflow: hidden;">
+
+    <div id="overlay">
+      <div class="icon"></div>
+      <h2>POSIZIONAMENTO</h2>
+      <p>Keep your phone vertically in front of you<br>to visulize the Flow</p>
+      <div id="status">Waiting for the correct position...</div>
+    </div>
+
     <script>
+      // Componente Colore (Fucsia -> Arancio)
       AFRAME.registerComponent('butterfly-color', {
-        schema: {
-          color: { type: 'color', default: '#ce0058' }
-        },
-        init: function () {
-          this.el.addEventListener('model-loaded', () => {
-            this.applyColor();
-          });
-        },
-        update: function () {
-          this.applyColor();
-        },
+        schema: { color: { type: 'color', default: '#ce0058' } },
+        init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
+        update: function () { this.applyColor(); },
         applyColor: function () {
           const mesh = this.el.getObject3D('mesh');
           if (!mesh) return;
           const newColor = new THREE.Color(this.data.color);
-          newColor.convertSRGBToLinear();
           mesh.traverse((node) => {
             if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
               node.material.emissive = newColor; 
-              node.material.emissiveIntensity = 15;        
+              node.material.emissiveIntensity = 2;
             }
           });
         }
@@ -42,79 +54,76 @@
         <a-asset-item id="butterflyModel" src="animated_butterfly_fucsia.glb"></a-asset-item>
       </a-assets>
 
-      <a-entity id="swarm"></a-entity>
+      <a-camera id="main-camera" look-controls></a-camera>
+
+      <a-entity id="swarm" visible="false"></a-entity>
+
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
       <a-entity light="type: directional; intensity: 1; position: 1 1 1"></a-entity>
-      <a-entity camera look-controls></a-entity>
     </a-scene>
-    
+
     <script>
       const swarm = document.querySelector('#swarm');
-      const numButterflies = 150;
-      const tLength = 20; // Lunghezza (Asse X)
-      const tHeight = 7;  // Altezza (Asse Y)
-      const tWidth = 7;   // Larghezza (Asse Z)
+      const overlay = document.querySelector('#overlay');
+      const camera = document.querySelector('#main-camera');
+      let activated = false;
 
-      // Logica Anti-Collisione: creazione di una griglia di slot Y/Z (corsie di volo)
-      // 12 righe x 13 colonne = 156 slot (sufficienti per 150 farfalle)
-      const rows = 12;
-      const cols = 13;
+      // CONTROLLO ORIENTAMENTO
+      // Verifichiamo ogni frame se il telefono è puntato in avanti
+      setInterval(() => {
+        if (activated) return;
+
+        const rotation = camera.getAttribute('rotation');
+        // Se il "pitch" (inclinazione verticale) è vicino a 0 (telefono verticale)
+        // A-Frame usa i gradi: 0 è dritto, 90 è verso l'alto, -90 verso il basso
+        if (rotation.x > -20 && rotation.x < 20) {
+          activateExperience();
+        }
+      }, 200);
+
+      function activateExperience() {
+        activated = true;
+        overlay.classList.add('hidden');
+        swarm.setAttribute('visible', 'true');
+      }
+
+      // --- LOGICA SCIAME (Tunnel Frontale) ---
+      const numButterflies = 150;
+      const tLength = 20; const tHeight = 7; const tWidth = 7;
+      const rows = 12; const cols = 13;
       let grid = [];
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          grid.push({
-            y: (r / (rows - 1)) * tHeight, 
-            // Posizionamento frontale: la larghezza è centrata e spostata davanti alla camera
-            z: -((c / (cols - 1)) * tWidth + 4) 
-          });
+          grid.push({ y: (r / (rows - 1)) * tHeight - 2, z: -((c / (cols - 1)) * tWidth + 5) });
         }
       }
-      // Mischia la griglia per una distribuzione più naturale
       grid.sort(() => Math.random() - 0.5);
+
       for (let i = 0; i < numButterflies; i++) {
         let butterfly = document.createElement('a-entity');
-        const slot = grid[i % grid.length]; // Assegna uno slot fisso per evitare collisioni
-
+        const slot = grid[i % grid.length];
         butterfly.setAttribute('gltf-model', '#butterflyModel');
         butterfly.setAttribute('animation-mixer', 'clip: Flying');
         butterfly.setAttribute('scale', '0.35 0.35 0.35');
         butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
         const resetButterfly = (el) => {
-          const startX = tLength;
-          const endX = -(tLength);
-          const posY = slot.y;
-          const posZ = slot.z;
           const moveDuration = Math.random() * 4000 + 8000;
-          const colorDuration = moveDuration * 0.6; 
-
-          el.setAttribute('position', `${startX} ${posY} ${posZ}`);
+          el.setAttribute('position', `${tLength} ${slot.y} ${slot.z}`);
           el.setAttribute('rotation', '0 -90 0');
           el.setAttribute('animation__move', {
-            property: 'position',
-            to: `${endX} ${posY} ${posZ}`,
-            dur: moveDuration,
-            easing: 'linear'
+            property: 'position', to: `${-tLength} ${slot.y} ${slot.z}`,
+            dur: moveDuration, easing: 'linear'
           });
-
           el.setAttribute('animation__color', {
-            property: 'butterfly-color.color',
-            from: '#ce0058',
-            to: '#fe5000',
-            dur: colorDuration,
-            easing: 'linear',
-            loop: false
+            property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000',
+            dur: moveDuration * 0.6, easing: 'linear', loop: false
           });
         };
 
-        butterfly.addEventListener('animationcomplete__move', () => {
-          resetButterfly(butterfly);
-        });
-
-        setTimeout(() => {
-          swarm.appendChild(butterfly);
-          resetButterfly(butterfly);
-        }, Math.random() * 10000);
+        butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly));
+        swarm.appendChild(butterfly);
+        resetButterfly(butterfly);
       }
     </script>
   </body>
