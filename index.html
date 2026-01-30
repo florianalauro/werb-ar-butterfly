@@ -11,17 +11,48 @@
       #overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.9); color: white;
-        display: flex; flex-direction: column; justify-content: center;
-        align-items: center; z-index: 1000; font-family: sans-serif; text-align: center;
+        z-index: 1000; font-family: sans-serif; text-align: center;
       }
-      h1, h2 { color: #fe5000; margin-bottom: 10px; }
+
+      /* Contenitore principale della prima schermata */
+      #status-msg {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between; /* Distribuisce Top, Center, Bottom */
+        height: 100%;
+        padding: 60px 20px; /* Spazio dai bordi superiore e inferiore */
+        box-sizing: border-box;
+      }
+
+      /* Gruppo centrale per THE LINK */
+      .middle-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      h1, h2 { color: #fe5000; margin: 0; }
+      
       .btn-start {
         background-color: #fe5000; color: white; border: none;
         padding: 18px 40px; font-size: 1.4em; border-radius: 50px;
-        cursor: pointer; margin-top: 25px; font-weight: bold;
+        cursor: pointer; font-weight: bold;
         box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
+        align-self: center;
       }
+
       .hidden { display: none !important; }
+
+      /* Schermata calibrazione (mantiene il centro) */
+      #calibration-msg {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
       .icon-frame {
         width: 40px; height: 70px; border: 3px solid #fe5000;
         border-radius: 8px; margin: 20px auto; animation: pulse 2s infinite;
@@ -34,13 +65,22 @@
 
     <div id="overlay">
       <div id="status-msg">
-        <a href="/">
-          <img src="Logo Ondulkart_w.svg" alt="Ondulkart" width="300" height="auto">
-        </a>
-        <h1 style="font-size:4em ";>THE LINK</h1> 
-        <p style="font-weight: 10px; ">Where Technology meets the Soul of Nature</p> 
-        <button class="btn-start" onclick="startExperience()">START</button>
+        <div class="logo-area">
+          <a href="/">
+            <img src="Logo Ondulkart_w.svg" alt="Ondulkart" width="260" height="auto">
+          </a>
+        </div>
+
+        <div class="middle-content">
+          <h1 style="font-size: 4em; line-height: 1.1;">THE LINK</h1> 
+          <p style="font-size: 1.2em; margin-top: 10px; opacity: 0.8;">Where Technology meets the Soul of Nature</p> 
+        </div>
+
+        <div class="button-area">
+          <button class="btn-start" onclick="startExperience()">START</button>
+        </div>
       </div>
+
       <div id="calibration-msg" class="hidden">
         <div class="icon-frame"></div>
         <h2>POSITION YOUR DEVICE</h2>
@@ -106,28 +146,24 @@
       setInterval(() => {
         if (!sensorsActive || experienceActivated) return;
         const rotation = camera.getAttribute('rotation');
-        // Attivazione quando il telefono è parallelo al corpo (verticale)
         if (rotation.x > -20 && rotation.x < 20) {
           experienceActivated = true;
           overlay.classList.add('hidden');
-          createSwarm(); // CREA LE FARFALLE SOLO ORA
+          createSwarm();
         }
       }, 200);
 
       function createSwarm() {
         const numButterflies = 100;
-        const tLength = 20; 
-        const tHeight = 6; 
-        const tWidth = 8;
-        const rows = 10;
-        const cols = 10;
+        const tLength = 20; const tHeight = 6; const tWidth = 8;
+        const rows = 10; const cols = 10;
         
         let grid = [];
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
             grid.push({ 
-              y: (r / (rows - 1)) * tHeight - (tHeight / 2) + 1.5, // Centrate altezza occhi
-              z: -((c / (cols - 1)) * tWidth + 5) // Davanti alla camera (da -5 a -13)
+              y: (r / (rows - 1)) * tHeight - (tHeight / 2) + 1.5,
+              z: -((c / (cols - 1)) * tWidth + 5)
             });
           }
         }
@@ -136,7 +172,6 @@
         for (let i = 0; i < numButterflies; i++) {
           let butterfly = document.createElement('a-entity');
           const slot = grid[i % grid.length];
-
           butterfly.setAttribute('gltf-model', '#butterflyModel');
           butterfly.setAttribute('animation-mixer', 'clip: Flying');
           butterfly.setAttribute('scale', '0.3 0.3 0.3');
@@ -144,35 +179,20 @@
 
           const resetButterfly = (el) => {
             const moveDuration = Math.random() * 4000 + 8000;
-            // Reset posizione a destra
             el.setAttribute('position', `${tLength} ${slot.y} ${slot.z}`);
             el.setAttribute('rotation', '0 -90 0');
-
-            // Rimuovi vecchie animazioni per evitare conflitti al reset
             el.removeAttribute('animation__move');
             el.removeAttribute('animation__color');
-
-            // Nuova Animazione Movimento
             el.setAttribute('animation__move', {
-              property: 'position',
-              to: `${-tLength} ${slot.y} ${slot.z}`,
-              dur: moveDuration,
-              easing: 'linear'
+              property: 'position', to: `${-tLength} ${slot.y} ${slot.z}`,
+              dur: moveDuration, easing: 'linear'
             });
-
-            // Nuova Animazione Colore
             el.setAttribute('animation__color', {
-              property: 'butterfly-color.color',
-              from: '#ce0058',
-              to: '#fe5000',
-              dur: moveDuration,
-              easing: 'linear'
+              property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000',
+              dur: moveDuration, easing: 'linear'
             });
           };
-
           butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly));
-          
-          // Partenza scaglionata per un flusso naturale
           setTimeout(() => {
             swarm.appendChild(butterfly);
             resetButterfly(butterfly);
