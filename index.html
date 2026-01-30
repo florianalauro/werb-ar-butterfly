@@ -23,7 +23,7 @@
 
     <div id="overlay">
       <div class="icon"></div>
-      <h2>POSIZIONAMENTO</h2>
+      <h2>POSITIONING</h2>
       <p>Keep your phone vertically in front of you<br>to visulize the Flow</p>
       <div id="status">Waiting for the correct position...</div>
     </div>
@@ -49,22 +49,20 @@
             if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
               node.material.emissive.copy(newColor); 
-              node.material.emissiveIntensity = 2;        
+              node.material.emissiveIntensity = 10;        
             }
           });
         }
       });
     </script>
 
-    <a-scene renderer="colorManagement: true; exposure: 1.3;" xr-mode-ui="enabled: false">
+    <a-scene renderer="colorManagement: true; exposure: 1.3;" xr-mode-ui="enabled: true">
       <a-assets>
         <a-asset-item id="butterflyModel" src="animated_butterfly_fucsia.glb"></a-asset-item>
       </a-assets>
 
       <a-camera id="main-camera" look-controls></a-camera>
-
       <a-entity id="swarm" visible="false"></a-entity>
-
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
       <a-entity light="type: directional; intensity: 1; position: 1 1 1"></a-entity>
     </a-scene>
@@ -115,7 +113,7 @@
 
         butterfly.setAttribute('gltf-model', '#butterflyModel');
         butterfly.setAttribute('animation-mixer', 'clip: Flying');
-        butterfly.setAttribute('scale', '0.3 0.3 0.3');
+        butterfly.setAttribute('scale', '0.35 0.35 0.35');
         butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
         const resetButterfly = (el) => {
