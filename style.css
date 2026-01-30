@@ -11,6 +11,11 @@
   text-align: center;
 }
 
+#overlay.semi-transparent {
+  background: rgba(0,0,0,0.4); /* Rende lo sfondo più leggero durante la calibrazione */
+  pointer-events: none; /* Permette di toccare gli elementi sottostanti se necessario */
+}
+
 /* Contenitore principale della prima schermata */
 #status-msg {
   display: flex;
