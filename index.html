@@ -45,6 +45,7 @@
           const mesh = this.el.getObject3D('mesh');
           if (!mesh) return;
           const newColor = new THREE.Color(this.data.color);
+          newColor.convertSRGBToLinear();
           mesh.traverse((node) => {
             if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
