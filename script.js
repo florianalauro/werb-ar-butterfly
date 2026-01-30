@@ -117,6 +117,72 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('scale', '0.3 0.3 0.3');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
+    // --- LOGICA TRASPORTO DATI.PNG ---
+    // Scegliamo casualmente se questa farfalla trasporta il file (es. 20% di probabilità)
+    if (Math.random() < 0.2) {
+      let dataPlane = document.createElement('a-plane');
+      dataPlane.setAttribute('src', '#dataTexture');
+      dataPlane.setAttribute('width', '0.8');
+      dataPlane.setAttribute('height', '0.5');
+      dataPlane.setAttribute('transparent', 'true');
+      // Posizionamento sotto le zampe: piatto (rotation -90 0 0) e leggermente in basso
+      dataPlane.setAttribute('position', '0 -0.1 0');
+      dataPlane.setAttribute('rotation', '-90 0 0');
+      dataPlane.setAttribute('material', 'side: double; shader: flat;');
+      
+      butterfly.appendChild(dataPlane);
+    }
+    // --------------------------------
+
+    const resetButterfly = (el) => {
+      const startX = tLength;
+      const endX = -(tLength);
+      const posY = slot.y;
+      const posZ = slot.z;
+      const moveDuration = Math.random() * 4000 + 8000;
+      const colorDuration = moveDuration * 0.6; 
+      
+      el.setAttribute('position', `${startX} ${posY} ${posZ}`);
+      el.setAttribute('rotation', '0 -90 0');
+      
+      el.setAttribute('animation__move', {
+        property: 'position', 
+        to: `${endX} ${posY} ${posZ}`,
+        dur: moveDuration, 
+        easing: 'linear'
+      });
+      
+      el.setAttribute('animation__color', {
+        property: 'butterfly-color.color', 
+        from: '#ce0058', 
+        to: '#fe5000',
+        dur: colorDuration, 
+        easing: 'linear',
+        loop: false
+      });
+    };
+
+    butterfly.addEventListener('animationcomplete__move', () => {
+      resetButterfly(butterfly);
+    });
+
+    setTimeout(() => {
+      swarmContainer.appendChild(butterfly);
+      resetButterfly(butterfly);
+    }, Math.random() * 10000);
+  }
+}
+  grid.sort(() => Math.random() - 0.5);
+
+  for (let i = 0; i < numButterflies; i++) {
+    let butterfly = document.createElement('a-entity');
+    const slot = grid[i % grid.length];
+    
+    butterfly.setAttribute('gltf-model', '#butterflyModel');
+    butterfly.setAttribute('animation-mixer', 'clip: Flying');
+    butterfly.setAttribute('scale', '0.3 0.3 0.3');
+    butterfly.setAttribute('butterfly-color', 'color: #ce0058');
+
     const resetButterfly = (el) => {
       const startX = tLength;
       const endX = -(tLength);
