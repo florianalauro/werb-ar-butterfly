@@ -1,63 +1,3 @@
-// 1. Registrazione Componente Personalizzato per il Colore
-AFRAME.registerComponent('butterfly-color', {
-  schema: { color: { type: 'color', default: '#ce0058' } },
-  init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
-  update: function () { this.applyColor(); },
-  applyColor: function () {
-    const mesh = this.el.getObject3D('mesh');
-    if (!mesh) return;
-    const newColor = new THREE.Color(this.data.color);
-    newColor.convertSRGBToLinear();
-    mesh.traverse((node) => {
-      if (node.isMesh && node.material && node.material.name === 'Wings') {
-        node.material.color.copy(newColor);
-        node.material.emissive.copy(newColor); 
-        node.material.emissiveIntensity = 15;        
-      }
-    });
-  }
-});
-
-// 2. Variabili di Stato
-let sensorsActive = false;
-let experienceActivated = false;
-
-// 3. Gestione Permessi e Inizio
-function startExperience() {
-  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission().then(response => {
-      if (response == 'granted') { proceed(); }
-    }).catch(console.error);
-  } else { 
-    proceed(); 
-  }
-}
-
-function proceed() {
-  sensorsActive = true;
-  document.getElementById('status-msg').classList.add('hidden');
-  document.getElementById('calibration-msg').classList.remove('hidden');
-}
-
-// 4. Logica di Calibrazione e Generazione Sciame
-window.addEventListener('load', () => {
-  const swarm = document.querySelector('#swarm');
-  const camera = document.querySelector('#main-camera');
-  const overlay = document.querySelector('#overlay');
-
-  setInterval(() => {
-    if (!sensorsActive || experienceActivated) return;
-    const rotation = camera.getAttribute('rotation');
-    
-    // Controlla se il dispositivo è in posizione verticale
-    if (rotation && rotation.x > -20 && rotation.x < 20) {
-      experienceActivated = true;
-      overlay.classList.add('hidden');
-      createSwarm(swarm);
-    }
-  }, 200);
-});
-
 function createSwarm(swarmContainer) {
   const numButterflies = 150;
   const tLength = 20; 
@@ -111,21 +51,21 @@ function createSwarm(swarmContainer) {
       
       // Rende l'immagine visibile da entrambi i lati
       imagePlane.setAttribute('material', 'side: double; transparent: true;');
+
+      imagePlane.setAttribute('animation__swing', {
+        property: 'rotation',
+        from: '-5 90 -5',
+        to: '5 90 5',
+        dur: 1500,
+        dir: 'alternate',
+        loop: true,
+        easing: 'easeInOutQuad'
+      });
     
       butterfly.appendChild(imagePlane);
     }
 // -------------------------------------------------------
 
-    imagePlane.setAttribute('animation__swing', {
-      property: 'rotation',
-      from: '-5 90 -5',
-      to: '5 90 5',
-      dur: 1500,
-      dir: 'alternate',
-      loop: true,
-      easing: 'easeInOutQuad'
-    });
-    
     const resetButterfly = (el) => {
       const startX = tLength;
       const endX = -(tLength);
