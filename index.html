@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Farfalle AR - Flow Corretto</title>
+    <title>Farfalle AR</title>
     <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <style>
@@ -50,20 +50,22 @@
             if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
               node.material.emissive.copy(newColor); 
-              node.material.emissiveIntensity = 10;        
+              node.material.emissiveIntensity = 2;        
             }
           });
         }
       });
     </script>
 
-    <a-scene renderer="colorManagement: true; exposure: 1.3;" xr-mode-ui="enabled: true">
+    <a-scene renderer="colorManagement: true; exposure: 1.3;" xr-mode-ui="enabled: false">
       <a-assets>
         <a-asset-item id="butterflyModel" src="animated_butterfly_fucsia.glb"></a-asset-item>
       </a-assets>
 
       <a-camera id="main-camera" look-controls></a-camera>
+
       <a-entity id="swarm" visible="false"></a-entity>
+
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
       <a-entity light="type: directional; intensity: 1; position: 1 1 1"></a-entity>
     </a-scene>
@@ -114,7 +116,7 @@
 
         butterfly.setAttribute('gltf-model', '#butterflyModel');
         butterfly.setAttribute('animation-mixer', 'clip: Flying');
-        butterfly.setAttribute('scale', '0.35 0.35 0.35');
+        butterfly.setAttribute('scale', '0.3 0.3 0.3');
         butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
         const resetButterfly = (el) => {
