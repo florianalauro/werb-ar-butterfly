@@ -117,30 +117,26 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('scale', '0.3 0.3 0.3');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-    // --- LOGICA TRASPORTO DATI.PNG ---
-    // Scegliamo casualmente se questa farfalla trasporta il file (es. 20% di probabilità)
-    if (Math.random() < 0.2) {
+    // Trasporto dati.png (30% delle farfalle)
+    if (i % 3 === 0) { 
       let dataPlane = document.createElement('a-plane');
-      dataPlane.setAttribute('src', '#dataTexture');
-      dataPlane.setAttribute('width', '0.8');
-      dataPlane.setAttribute('height', '0.5');
-      dataPlane.setAttribute('transparent', 'true');
-      // Posizionamento sotto le zampe: piatto (rotation -90 0 0) e leggermente in basso
-      dataPlane.setAttribute('position', '0 -0.1 0');
+      // Assicurati che dati.png sia nella stessa cartella di index.html
+      dataPlane.setAttribute('src', 'dati.png'); 
+      dataPlane.setAttribute('width', '1');
+      dataPlane.setAttribute('height', '0.6');
+      dataPlane.setAttribute('position', '0 -0.2 0');
       dataPlane.setAttribute('rotation', '-90 0 0');
-      dataPlane.setAttribute('material', 'side: double; shader: flat;');
+      dataPlane.setAttribute('material', 'transparent: true; side: double; shader: flat;');
       
       butterfly.appendChild(dataPlane);
     }
-    // --------------------------------
 
     const resetButterfly = (el) => {
       const startX = tLength;
-      const endX = -(tLength);
+      const endX = -tLength;
       const posY = slot.y;
       const posZ = slot.z;
       const moveDuration = Math.random() * 4000 + 8000;
-      const colorDuration = moveDuration * 0.6; 
       
       el.setAttribute('position', `${startX} ${posY} ${posZ}`);
       el.setAttribute('rotation', '0 -90 0');
@@ -151,15 +147,6 @@ function createSwarm(swarmContainer) {
         dur: moveDuration, 
         easing: 'linear'
       });
-      
-      el.setAttribute('animation__color', {
-        property: 'butterfly-color.color', 
-        from: '#ce0058', 
-        to: '#fe5000',
-        dur: colorDuration, 
-        easing: 'linear',
-        loop: false
-      });
     };
 
     butterfly.addEventListener('animationcomplete__move', () => {
@@ -169,7 +156,7 @@ function createSwarm(swarmContainer) {
     setTimeout(() => {
       swarmContainer.appendChild(butterfly);
       resetButterfly(butterfly);
-    }, Math.random() * 10000);
+    }, Math.random() * 5000); // Ridotto il tempo di attesa per vederle prima
   }
 }
   grid.sort(() => Math.random() - 0.5);
