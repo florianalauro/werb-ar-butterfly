@@ -69,10 +69,8 @@
       let activated = false;
 
       // CONTROLLO ORIENTAMENTO
-      // Verifichiamo ogni frame se il telefono è puntato in avanti
       setInterval(() => {
         if (activated) return;
-
         const rotation = camera.getAttribute('rotation');
         // Se il "pitch" (inclinazione verticale) è vicino a 0 (telefono verticale)
         // A-Frame usa i gradi: 0 è dritto, 90 è verso l'alto, -90 verso il basso
@@ -113,7 +111,7 @@
           el.setAttribute('rotation', '0 -90 0');
           el.setAttribute('animation__move', {
             property: 'position', to: `${-tLength} ${slot.y} ${slot.z}`,
-            dur: colorDuration, easing: 'linear'
+            dur: moveDuration, easing: 'linear'
           });
           el.setAttribute('animation__color', {
             property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000',
@@ -121,10 +119,17 @@
           });
         };
 
-        butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly));
-        swarm.appendChild(butterfly);
-        resetButterfly(butterfly);
+        butterfly.addEventListener('animationcomplete__move', () => {
+          resetButterfly(butterfly);
+        });
+
+        // Partenza ritardata casuale per creare l'effetto flusso
+        setTimeout(() => {
+          swarm.appendChild(butterfly);
+          resetButterfly(butterfly);
+        }, Math.random() * 10000);
       }
     </script>
+    
   </body>
 </html>
