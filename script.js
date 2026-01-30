@@ -35,9 +35,40 @@ function startExperience() {
 
 function proceed() {
   sensorsActive = true;
-  document.getElementById('status-msg').classList.add('hidden');
-  document.getElementById('calibration-msg').classList.remove('hidden');
+  const overlay = document.getElementById('overlay');
+  const statusMsg = document.getElementById('status-msg');
+  const calibMsg = document.getElementById('calibration-msg');
+
+  statusMsg.classList.add('hidden');
+  calibMsg.classList.remove('hidden');
+  
+  // Cambiamo lo sfondo dell'overlay per vedere la telecamera durante la calibrazione
+  overlay.classList.add('semi-transparent'); 
 }
+
+// Modifica anche l'intervallo di calibrazione per essere più robusto
+window.addEventListener('load', () => {
+  const swarm = document.querySelector('#swarm');
+  const camera = document.querySelector('#main-camera');
+  const overlay = document.querySelector('#overlay');
+
+  setInterval(() => {
+    // Se i sensori non sono attivi o l'esperienza è già partita, esci
+    if (!sensorsActive || experienceActivated) return;
+
+    // Assicuriamoci che l'oggetto Three.js della camera sia pronto
+    if (camera.object3D) {
+      const rotation = camera.getAttribute('rotation');
+      
+      // Controllo posizione verticale (margine più ampio per facilitare l'utente)
+      if (rotation && rotation.x > -30 && rotation.x < 30) {
+        experienceActivated = true;
+        overlay.classList.add('hidden'); // Nasconde tutto l'overlay
+        createSwarm(swarm);
+      }
+    }
+  }, 200);
+});
 
 // 4. Logica di Calibrazione e Generazione Sciame
 window.addEventListener('load', () => {
