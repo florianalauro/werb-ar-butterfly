@@ -10,36 +10,20 @@
     <style>
       #overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.9); 
-        color: white; /* Testo generale bianco */
+        background: rgba(0,0,0,0.9); color: white;
         display: flex; flex-direction: column; justify-content: center;
         align-items: center; z-index: 1000; font-family: sans-serif; text-align: center;
       }
-      
-      /* Titolo in Arancione #FE5000 (ex Fucsia) */
       h1, h2 { color: #fe5000; margin-bottom: 10px; }
-
-      /* Pulsante in Arancione #FE5000 (ex Fucsia) */
       .btn-start {
         background-color: #fe5000; color: white; border: none;
         padding: 18px 40px; font-size: 1.4em; border-radius: 50px;
         cursor: pointer; margin-top: 25px; font-weight: bold;
         box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
       }
-
-      /* Icona con dettagli in Arancione #FE5000 (ex Fucsia) */
-      .icon { width: 80px; height: 80px; border: 2px solid white; border-radius: 10px; margin-bottom: 20px; position: relative; }
-      .icon::after { 
-        content: ''; position: absolute; top: 10px; left: 50%; 
-        width: 2px; height: 60px; 
-        background: #fe5000; /* Linea interna arancione */
-        transform: translateX(-50%); 
-      }
-
       .hidden { display: none !important; }
-      
       .icon-frame {
-        width: 40px; height: 70px; border: 3px solid #fe5000; /* Bordo calibrazione arancione */
+        width: 40px; height: 70px; border: 3px solid #fe5000;
         border-radius: 8px; margin: 20px auto; animation: pulse 2s infinite;
       }
       @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
@@ -50,8 +34,8 @@
 
     <div id="overlay">
       <div id="status-msg">
-        <h1>BUTTERFLY FLOW</h1>
-        <p>Welcome to the Flow</p>
+        <h1>THE FLOW</h1> 
+        <p>↓</p> 
         <button class="btn-start" onclick="startExperience()">START</button>
       </div>
       <div id="calibration-msg" class="hidden">
@@ -70,11 +54,12 @@
           const mesh = this.el.getObject3D('mesh');
           if (!mesh) return;
           const newColor = new THREE.Color(this.data.color);
+          newColor.convertSRGBToLinear();
           mesh.traverse((node) => {
             if (node.isMesh && node.material && node.material.name === 'Wings') {
               node.material.color.copy(newColor);
               node.material.emissive.copy(newColor); 
-              node.material.emissiveIntensity = 2;        
+              node.material.emissiveIntensity = 15;        
             }
           });
         }
@@ -104,7 +89,7 @@
       </a-assets>
 
       <a-camera id="main-camera" look-controls></a-camera>
-      <a-entity id="swarm" visible="false"></a-entity>
+      <a-entity id="swarm"></a-entity>
 
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
       <a-entity light="type: directional; intensity: 1; position: 1 1 1"></a-entity>
@@ -118,49 +103,78 @@
       setInterval(() => {
         if (!sensorsActive || experienceActivated) return;
         const rotation = camera.getAttribute('rotation');
-        if (rotation.x > -25 && rotation.x < 25) {
+        // Attivazione quando il telefono è parallelo al corpo (verticale)
+        if (rotation.x > -20 && rotation.x < 20) {
           experienceActivated = true;
           overlay.classList.add('hidden');
-          swarm.setAttribute('visible', 'true');
+          createSwarm(); // CREA LE FARFALLE SOLO ORA
         }
       }, 200);
 
-      // --- LOGICA TUNNEL ---
-      const numButterflies = 100;
-      const tLength = 20; const tHeight = 7; const tWidth = 7;
-      const rows = 12; const cols = 13;
-      let grid = [];
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          grid.push({ y: (r / (rows - 1)) * tHeight, z: -((c / (cols - 1)) * tWidth + 5) });
+      function createSwarm() {
+        const numButterflies = 100;
+        const tLength = 20; 
+        const tHeight = 6; 
+        const tWidth = 8;
+        const rows = 10;
+        const cols = 10;
+        
+        let grid = [];
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            grid.push({ 
+              y: (r / (rows - 1)) * tHeight - (tHeight / 2) + 1.5, // Centrate altezza occhi
+              z: -((c / (cols - 1)) * tWidth + 5) // Davanti alla camera (da -5 a -13)
+            });
+          }
         }
-      }
-      grid.sort(() => Math.random() - 0.5);
+        grid.sort(() => Math.random() - 0.5);
 
-      for (let i = 0; i < numButterflies; i++) {
-        let butterfly = document.createElement('a-entity');
-        const slot = grid[i % grid.length];
-        butterfly.setAttribute('gltf-model', '#butterflyModel');
-        butterfly.setAttribute('animation-mixer', 'clip: Flying');
-        butterfly.setAttribute('scale', '0.35 0.35 0.35');
-        butterfly.setAttribute('butterfly-color', 'color: #ce0058');
+        for (let i = 0; i < numButterflies; i++) {
+          let butterfly = document.createElement('a-entity');
+          const slot = grid[i % grid.length];
 
-        const resetButterfly = (el) => {
-          const moveDuration = Math.random() * 4000 + 8000;
-          el.setAttribute('position', `${tLength} ${slot.y} ${slot.z}`);
-          el.setAttribute('rotation', '0 -90 0');
-          el.setAttribute('animation__move', {
-            property: 'position', to: `${-tLength} ${slot.y} ${slot.z}`,
-            dur: moveDuration, easing: 'linear'
-          });
-          el.setAttribute('animation__color', {
-            property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000',
-            dur: moveDuration, easing: 'linear'
-          });
-        };
-        butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly));
-        swarm.appendChild(butterfly);
-        resetButterfly(butterfly);
+          butterfly.setAttribute('gltf-model', '#butterflyModel');
+          butterfly.setAttribute('animation-mixer', 'clip: Flying');
+          butterfly.setAttribute('scale', '0.3 0.3 0.3');
+          butterfly.setAttribute('butterfly-color', 'color: #ce0058');
+
+          const resetButterfly = (el) => {
+            const moveDuration = Math.random() * 4000 + 8000;
+            // Reset posizione a destra
+            el.setAttribute('position', `${tLength} ${slot.y} ${slot.z}`);
+            el.setAttribute('rotation', '0 -90 0');
+
+            // Rimuovi vecchie animazioni per evitare conflitti al reset
+            el.removeAttribute('animation__move');
+            el.removeAttribute('animation__color');
+
+            // Nuova Animazione Movimento
+            el.setAttribute('animation__move', {
+              property: 'position',
+              to: `${-tLength} ${slot.y} ${slot.z}`,
+              dur: moveDuration,
+              easing: 'linear'
+            });
+
+            // Nuova Animazione Colore
+            el.setAttribute('animation__color', {
+              property: 'butterfly-color.color',
+              from: '#ce0058',
+              to: '#fe5000',
+              dur: moveDuration,
+              easing: 'linear'
+            });
+          };
+
+          butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly));
+          
+          // Partenza scaglionata per un flusso naturale
+          setTimeout(() => {
+            swarm.appendChild(butterfly);
+            resetButterfly(butterfly);
+          }, Math.random() * 10000);
+        }
       }
     </script>
   </body>
