@@ -102,7 +102,7 @@ function createSwarm(swarmContainer) {
     for (let c = 0; c < cols; c++) {
       grid.push({ 
         y: (r / (rows - 1)) * tHeight,
-        z: -((c / (cols - 1)) * tWidth + 4)
+        z: -((c / (cols - 1)) * tWidth + 2)
       });
     }
   }
@@ -114,7 +114,7 @@ function createSwarm(swarmContainer) {
     
     butterfly.setAttribute('gltf-model', '#butterflyModel');
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
-    butterfly.setAttribute('scale', '0.35 0.35 0.35');
+    butterfly.setAttribute('scale', '0.3 0.3 0.3');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
     const resetButterfly = (el) => {
