@@ -117,59 +117,6 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('scale', '0.3 0.3 0.3');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-    // Trasporto dati.png (30% delle farfalle)
-    if (i % 3 === 0) { 
-      let dataPlane = document.createElement('a-plane');
-      // Assicurati che dati.png sia nella stessa cartella di index.html
-      dataPlane.setAttribute('src', 'dati.png'); 
-      dataPlane.setAttribute('width', '1');
-      dataPlane.setAttribute('height', '0.6');
-      dataPlane.setAttribute('position', '0 -0.2 0');
-      dataPlane.setAttribute('rotation', '-90 0 0');
-      dataPlane.setAttribute('material', 'transparent: true; side: double; shader: flat;');
-      
-      butterfly.appendChild(dataPlane);
-    }
-
-    const resetButterfly = (el) => {
-      const startX = tLength;
-      const endX = -tLength;
-      const posY = slot.y;
-      const posZ = slot.z;
-      const moveDuration = Math.random() * 4000 + 8000;
-      
-      el.setAttribute('position', `${startX} ${posY} ${posZ}`);
-      el.setAttribute('rotation', '0 -90 0');
-      
-      el.setAttribute('animation__move', {
-        property: 'position', 
-        to: `${endX} ${posY} ${posZ}`,
-        dur: moveDuration, 
-        easing: 'linear'
-      });
-    };
-
-    butterfly.addEventListener('animationcomplete__move', () => {
-      resetButterfly(butterfly);
-    });
-
-    setTimeout(() => {
-      swarmContainer.appendChild(butterfly);
-      resetButterfly(butterfly);
-    }, Math.random() * 5000); // Ridotto il tempo di attesa per vederle prima
-  }
-}
-  grid.sort(() => Math.random() - 0.5);
-
-  for (let i = 0; i < numButterflies; i++) {
-    let butterfly = document.createElement('a-entity');
-    const slot = grid[i % grid.length];
-    
-    butterfly.setAttribute('gltf-model', '#butterflyModel');
-    butterfly.setAttribute('animation-mixer', 'clip: Flying');
-    butterfly.setAttribute('scale', '0.3 0.3 0.3');
-    butterfly.setAttribute('butterfly-color', 'color: #ce0058');
-
     const resetButterfly = (el) => {
       const startX = tLength;
       const endX = -(tLength);
