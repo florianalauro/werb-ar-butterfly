@@ -118,7 +118,7 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
     const resetButterfly = (el) => {
-      const startX = tLength;
+      const startX = tLength/2;
       const endX = -(tLength);
       const posY = slot.y;
       const posZ = slot.z;
