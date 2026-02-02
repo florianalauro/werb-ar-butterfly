@@ -1,4 +1,4 @@
-// 1. Registrazione Componente Personalizzato per il Colore
+// 1. Registrazione Componente Personalizzato per il Colore e le Emissioni
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
@@ -12,7 +12,7 @@ AFRAME.registerComponent('butterfly-color', {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
         node.material.color.copy(newColor);
         node.material.emissive.copy(newColor); 
-        node.material.emissiveIntensity = 2;        
+        node.material.emissiveIntensity = 15;        
       }
     });
   }
@@ -22,7 +22,7 @@ AFRAME.registerComponent('butterfly-color', {
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 3. Gestione Permessi
+// 3. Gestione Permessi (Invocata dal bottone START nel file HTML)
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
@@ -35,16 +35,18 @@ function startExperience() {
 
 function proceed() {
   sensorsActive = true;
+  const overlay = document.getElementById('overlay');
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
-  document.getElementById('overlay').classList.add('semi-transparent');
+  // Rende lo sfondo semi-trasparente per vedere la camera durante la calibrazione
+  overlay.classList.add('semi-transparent'); 
 }
 
-// 4. Controllo Calibrazione e Attivazione
+// 4. Controllo Calibrazione e Attivazione Automatica
 window.addEventListener('load', () => {
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
-  const overlay = document.querySelector('#overlay');
+  const overlay = document.getElementById('overlay');
 
   setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
@@ -55,23 +57,21 @@ window.addEventListener('load', () => {
       // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
       if (rotation && rotation.x > -25 && rotation.x < 25) {
         experienceActivated = true;
-        overlay.classList.add('hidden'); 
+        overlay.classList.add('hidden'); // Nasconde l'overlay e mostra lo sciame
         createSwarm(swarm);
       }
     }
   }, 200);
 });
 
-// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
+// 5. Logica dello Sciame (Tunnel 28m x 7.5m) con Oscillazione
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
-  
-  // DIMENSIONI REALI (metri)
   const tunnelLength = 28; 
   const tunnelWidth = 7.5;
   const tunnelHeight = 4;
-  const groundOffset = 0.5; // Sollevamento indicato in planimetria
-  const povDistance = 1;    // Distanza dal punto viola alla zona rossa
+  const groundOffset = 0.5;
+  const povDistance = 1;
 
   const rows = 12; 
   const cols = 13;
@@ -80,9 +80,7 @@ function createSwarm(swarmContainer) {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       grid.push({ 
-        // Y: Parte da 0.5m e sale fino a 4.5m
         y: (r / (rows - 1)) * tunnelHeight + groundOffset,
-        // Z: Parte da 1m di distanza e copre i 7.5m di larghezza
         z: -((c / (cols - 1)) * tunnelWidth + povDistance)
       });
     }
@@ -98,42 +96,55 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-    const resetButterfly = (el) => {
-      // X: Copre i 28 metri del tunnel (da +14 a -14 rispetto al centro)
+    const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
       
-      const moveDuration = Math.random() * 4000 + 10000; // Più lente dato che il tunnel è lungo
-      const colorDuration = moveDuration * 0.7; 
+      // Primo spawn: le distribuiamo casualmente lungo il tunnel per non avere il vuoto iniziale
+      const currentX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
       
-      el.setAttribute('position', `${startX} ${slot.y} ${slot.z}`);
+      const moveDuration = Math.random() * 5000 + 12000; 
+      const distanceFactor = isFirstSpawn ? ((currentX - endX) / tunnelLength) : 1;
+
+      el.setAttribute('position', `${currentX} ${slot.y} ${slot.z}`);
       el.setAttribute('rotation', '0 -90 0');
       
+      // Animazione 1: Movimento orizzontale (X)
       el.setAttribute('animation__move', {
-        property: 'position', 
-        to: `${endX} ${slot.y} ${slot.z}`,
-        dur: moveDuration, 
+        property: 'position.x', 
+        to: endX,
+        dur: moveDuration * distanceFactor, 
         easing: 'linear'
       });
       
+      // Animazione 2: Cambio colore (dal fucsia all'arancio)
       el.setAttribute('animation__color', {
         property: 'butterfly-color.color', 
         from: '#ce0058', 
         to: '#fe5000',
-        dur: colorDuration, 
-        easing: 'linear',
-        loop: false
+        dur: moveDuration * 0.8, 
+        easing: 'linear'
+      });
+
+      // Animazione 3: Oscillazione Verticale (Bobbing)
+      el.setAttribute('animation__bob', {
+        property: 'position.y',
+        from: slot.y - 0.15,
+        to: slot.y + 0.15,
+        dur: Math.random() * 1000 + 1500,
+        dir: 'alternate',
+        loop: true,
+        easing: 'easeInOutSine'
       });
     };
 
     butterfly.addEventListener('animationcomplete__move', () => {
-      resetButterfly(butterfly);
+      resetButterfly(butterfly, false);
     });
 
-    // Partenza distribuita per creare l'effetto flusso continuo
     setTimeout(() => {
       swarmContainer.appendChild(butterfly);
-      resetButterfly(butterfly);
-    }, Math.random() * 12000);
+      resetButterfly(butterfly, true); 
+    }, i * 150); 
   }
 }
