@@ -1,4 +1,4 @@
-// 1. REGISTRAZIONE COMPONENTE (Mantiene i colori fucsia -> arancio)
+// 1. Registrazione Componente Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
@@ -12,39 +12,32 @@ AFRAME.registerComponent('butterfly-color', {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
         node.material.color.copy(newColor);
         node.material.emissive.copy(newColor); 
-        node.material.emissiveIntensity = 15;        
+        node.material.emissiveIntensity = 10;        
       }
     });
   }
 });
 
-// --- NUOVA FUNZIONE PER IL MOVIMENTO LIBERO (Inserita qui alla riga 25) ---
-// Questa funzione dice alla scena: "Quando entri in AR, resetta lo zero sulla posizione dell'utente"
-document.addEventListener('DOMContentLoaded', () => {
-  const sceneEl = document.querySelector('a-scene');
-  sceneEl.addEventListener('enter-vr', () => {
-    if (sceneEl.is('ar-mode')) {
-      const cameraEl = document.querySelector('#main-camera');
-      // Fissiamo la posizione iniziale per permettere all'utente di camminare
-      cameraEl.setAttribute('position', '0 0 0');
-      console.log("Modalità Movimento Libero (6DOF) attivata.");
-    }
-  });
-});
-
-// 2. VARIABILI DI STATO
 let sensorsActive = false;
 let experienceActivated = false;
+let is6DOFSupported = false;
 
-// 3. GESTIONE PERMESSI
-function startExperience() {
-  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission().then(response => {
-      if (response == 'granted') { proceed(); }
-    }).catch(console.error);
-  } else { 
-    proceed(); 
+// 2. Controllo Supporto Movimento Libero (WebXR)
+async function checkARSupport() {
+  if (navigator.xr) {
+    is6DOFSupported = await navigator.xr.isSessionSupported('immersive-ar');
   }
+  console.log("Supporto movimento libero:", is6DOFSupported);
+}
+
+function startExperience() {
+  checkARSupport().then(() => {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(response => {
+        if (response == 'granted') { proceed(); }
+      }).catch(console.error);
+    } else { proceed(); }
+  });
 }
 
 function proceed() {
@@ -53,7 +46,7 @@ function proceed() {
   document.getElementById('calibration-msg').classList.remove('hidden');
 }
 
-// 4. LOGICA DI ATTIVAZIONE (Unificata e pulita)
+// 3. Attivazione Intelligente
 window.addEventListener('load', () => {
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
@@ -61,37 +54,37 @@ window.addEventListener('load', () => {
 
   setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
-
-    if (camera.object3D) {
-      const rotation = camera.getAttribute('rotation');
-      // Controllo posizione verticale (pitch tra -20 e 20 gradi)
-      if (rotation && rotation.x > -20 && rotation.x < 20) {
-        experienceActivated = true;
-        overlay.classList.add('hidden'); 
-        createSwarm(swarm);
+    const rotation = camera.getAttribute('rotation');
+    
+    if (rotation && rotation.x > -25 && rotation.x < 25) {
+      experienceActivated = true;
+      overlay.classList.add('hidden');
+      
+      // Se il telefono non supporta il movimento, blocchiamo lo sciame alla camera
+      if (!is6DOFSupported) {
+        swarm.setAttribute('position', '0 0 0'); // Segue l'utente
       }
+      
+      createSwarm(swarm);
     }
   }, 200);
 });
 
-// 5. GENERAZIONE SCIAME (Dimensioni tunnel 28m x 7.5m)
+// 4. Creazione Sciame Ottimizzato (28m x 7.5m)
 function createSwarm(swarmContainer) {
-  const numButterflies = 150;
+  const numButterflies = 85; // Numero magico per compatibilità universale
   const tunnelLength = 28; 
   const tunnelWidth = 7.5;
-  const tunnelHeight = 3;
-  const groundOffset = 0.5; // Tunnel sollevato di 50cm
-  const povDistance = 1.5;    // Distanza di 1m dal punto di vista
+  const tunnelHeight = 4;
+  const groundOffset = 0.5;
+  const povDistance = 1.5;
 
-  const rows = 12; 
-  const cols = 13;
-  
   let grid = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
+  for (let r = 0; r < 10; r++) {
+    for (let c = 0; c < 10; c++) {
       grid.push({ 
-        y: (r / (rows - 1)) * tunnelHeight + groundOffset,
-        z: -((c / (cols - 1)) * tunnelWidth + povDistance)
+        y: (r / 9) * tunnelHeight + groundOffset,
+        z: -((c / 9) * tunnelWidth + povDistance)
       });
     }
   }
@@ -100,10 +93,9 @@ function createSwarm(swarmContainer) {
   for (let i = 0; i < numButterflies; i++) {
     let butterfly = document.createElement('a-entity');
     const slot = grid[i % grid.length];
-    
     butterfly.setAttribute('gltf-model', '#butterflyModel');
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
-    butterfly.setAttribute('scale', '0.25 0.2 0.25');
+    butterfly.setAttribute('scale', '0.3 0.25 0.3');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
     const resetButterfly = (el) => {
@@ -113,7 +105,6 @@ function createSwarm(swarmContainer) {
       
       el.setAttribute('position', `${startX} ${slot.y} ${slot.z}`);
       el.setAttribute('rotation', '0 -90 0');
-      
       el.removeAttribute('animation__move');
       el.removeAttribute('animation__color');
       
@@ -121,18 +112,16 @@ function createSwarm(swarmContainer) {
         property: 'position', to: `${endX} ${slot.y} ${slot.z}`,
         dur: moveDuration, easing: 'linear'
       });
-      
       el.setAttribute('animation__color', {
         property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000',
-        dur: moveDuration, easing: 'linear'
+        dur: moveDuration * 0.8, easing: 'linear'
       });
     };
 
     butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly));
-
     setTimeout(() => {
       swarmContainer.appendChild(butterfly);
       resetButterfly(butterfly);
-    }, Math.random() * 12000);
+    }, Math.random() * 10000);
   }
 }
