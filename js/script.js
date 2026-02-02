@@ -65,12 +65,11 @@ window.addEventListener('load', () => {
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
   
-  // DIMENSIONI REALI (metri)
   const tunnelLength = 28; 
   const tunnelWidth = 7.5;
   const tunnelHeight = 4;
-  const groundOffset = 0.5; // Sollevamento indicato in planimetria
-  const povDistance = 1;    // Distanza dal punto viola alla zona rossa
+  const groundOffset = 0.5;
+  const povDistance = 1;
 
   const rows = 12; 
   const cols = 13;
@@ -79,9 +78,7 @@ function createSwarm(swarmContainer) {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       grid.push({ 
-        // Y: Parte da 0.5m e sale fino a 4.5m
         y: (r / (rows - 1)) * tunnelHeight + groundOffset,
-        // Z: Parte da 1m di distanza e copre i 7.5m di larghezza
         z: -((c / (cols - 1)) * tunnelWidth + povDistance)
       });
     }
@@ -97,21 +94,29 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-    const resetButterfly = (el) => {
-      // X: Copre i 28 metri del tunnel (da +14 a -14 rispetto al centro)
+    // Funzione di reset modificata
+    const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
       
-      const moveDuration = Math.random() * 4000 + 10000; // Più lente dato che il tunnel è lungo
-      const colorDuration = moveDuration * 0.7; 
+      // Se è la prima apparizione, spawniamo in un punto a caso lungo la X
+      // Altrimenti, partono sempre dall'inizio (startX)
+      const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
       
-      el.setAttribute('position', `${startX} ${slot.y} ${slot.z}`);
+      const moveDuration = Math.random() * 4000 + 10000;
+      
+      // Calcoliamo una durata proporzionale alla distanza rimanente per il primo volo
+      // per evitare che le farfalle a metà tunnel vadano troppo lente
+      const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
+      const currentDuration = moveDuration * distanceRatio;
+
+      el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
       el.setAttribute('rotation', '0 -90 0');
       
       el.setAttribute('animation__move', {
         property: 'position', 
         to: `${endX} ${slot.y} ${slot.z}`,
-        dur: moveDuration, 
+        dur: currentDuration, 
         easing: 'linear'
       });
       
@@ -119,20 +124,20 @@ function createSwarm(swarmContainer) {
         property: 'butterfly-color.color', 
         from: '#ce0058', 
         to: '#fe5000',
-        dur: colorDuration, 
+        dur: currentDuration * 0.7, 
         easing: 'linear',
         loop: false
       });
     };
 
     butterfly.addEventListener('animationcomplete__move', () => {
-      resetButterfly(butterfly);
+      // Dal secondo volo in poi, isFirstSpawn è false (partono dal fondo)
+      resetButterfly(butterfly, false);
     });
 
-    // Partenza distribuita per creare l'effetto flusso continuo
-    setTimeout(() => {
-      swarmContainer.appendChild(butterfly);
-      resetButterfly(butterfly);
-    }, Math.random() * 12000);
+    // Rimosso il setTimeout: aggiungiamo tutto subito
+    swarmContainer.appendChild(butterfly);
+    // Passiamo true per distribuire le farfalle ovunque all'avvio
+    resetButterfly(butterfly, true);
   }
 }
