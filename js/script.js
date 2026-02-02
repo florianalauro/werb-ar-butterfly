@@ -1,4 +1,4 @@
-// 1. Registrazione Componente Colore (Corretto)
+// 1. Registrazione Componente Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { 
@@ -25,16 +25,13 @@ AFRAME.registerComponent('butterfly-color', {
   }
 });
 
-// 2. Stato
+// 2. Variabili di Stato
 let sensorsActive = false;
 let experienceActivated = false;
 
+// 3. Gestione Start (Senza VR)
 function startExperience() {
-  // Forza lo sblocco audio/video per browser mobile
-  const scene = document.querySelector('a-scene');
-  if (scene) scene.enterVR(); // Entra e esce subito per sbloccare i sensori
-  setTimeout(() => { if(scene) scene.exitVR(); }, 100);
-
+  // Richiesta permessi sensori (iOS)
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
@@ -48,74 +45,68 @@ function proceed() {
   sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
+  
+  // Forza il motore AR a ricalcolare le dimensioni (risolve lo schermo nero/bloccato)
+  window.dispatchEvent(new Event('resize'));
 }
 
-// 3. Controllo Calibrazione Semplificato
+// 4. Controllo Calibrazione
 window.addEventListener('load', () => {
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
   const overlay = document.querySelector('#overlay');
-  const calibText = document.querySelector('#calibration-msg h2');
 
   const checkInterval = setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
 
-    // Lettura diretta degli attributi A-Frame (più stabile su mobile)
+    // Usiamo il componente 'rotation' di A-Frame
     const rotation = camera.getAttribute('rotation');
     
     if (rotation) {
-      // DEBUG VISIVO: se inclini il telefono correttamente, il testo diventa verde
-      if (rotation.x > -30 && rotation.x < 30) {
-        calibText.style.color = "#00ff00"; // Segnale di successo
+      // Se il telefono è tenuto dritto davanti agli occhi
+      if (rotation.x > -25 && rotation.x < 25) {
         experienceActivated = true;
-        
-        setTimeout(() => {
-          overlay.classList.add('hidden');
-          createSwarm(swarm);
-          clearInterval(checkInterval);
-        }, 500);
-      } else {
-        calibText.style.color = "#fe5000"; // Segnale di "continua a calibrare"
+        overlay.classList.add('hidden');
+        createSwarm(swarm);
+        clearInterval(checkInterval);
       }
     }
   }, 200);
 });
 
-// 4. Creazione Sciame (Logica Robusta)
+// 5. Creazione Sciame (Ottimizzata)
 function createSwarm(swarmContainer) {
-  const numButterflies = 60; // Iniziamo con 60 per testare la fluidità
+  const numButterflies = 70;
+  const tunnelLength = 28;
   
   for (let i = 0; i < numButterflies; i++) {
     setTimeout(() => {
       const butterfly = document.createElement('a-entity');
       
-      // Impostiamo tutto PRIMA di appenderlo per evitare glitch
       butterfly.setAttribute('gltf-model', '#butterflyModel');
       butterfly.setAttribute('scale', '0.2 0.15 0.2');
       butterfly.setAttribute('butterfly-color', 'color: #ce0058');
       
-      // Coordinate iniziali casuali nel tunnel
-      const startX = 14;
+      const startX = tunnelLength / 2; // Inizia a +14m
       const startY = Math.random() * 4 + 0.5;
       const startZ = -(Math.random() * 7 + 1);
 
       butterfly.setAttribute('position', `${startX} ${startY} ${startZ}`);
       butterfly.setAttribute('rotation', '0 -90 0');
 
-      // Lancio animazioni dopo il caricamento
       butterfly.addEventListener('model-loaded', () => {
         butterfly.setAttribute('animation-mixer', 'clip: Flying');
         
-        // Movimento verso l'uscita
+        // Movimento lineare
         butterfly.setAttribute('animation__move', {
           property: 'position.x',
-          to: -14,
-          dur: 12000 + Math.random() * 5000,
+          to: -startX, // Arriva a -14m
+          dur: 12000 + Math.random() * 4000,
           easing: 'linear',
-          loop: true // Loop automatico per semplicità di test
+          loop: true
         });
 
-        // Cambio colore
+        // Cambio colore graduale
         butterfly.setAttribute('animation__color', {
           property: 'butterfly-color.color',
           from: '#ce0058',
@@ -128,6 +119,6 @@ function createSwarm(swarmContainer) {
       });
 
       swarmContainer.appendChild(butterfly);
-    }, i * 200);
+    }, i * 150);
   }
 }
