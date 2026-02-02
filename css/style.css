@@ -1,3 +1,9 @@
+/* --- Reset e Base --- */
+body {
+  margin: 0;
+  overflow: hidden;
+}
+
 #overlay {
   position: fixed; 
   top: 0; 
@@ -12,11 +18,11 @@
 }
 
 #overlay.semi-transparent {
-  background: rgba(0,0,0,0.4); /* Rende lo sfondo più leggero durante la calibrazione */
-  pointer-events: none; /* Permette di toccare gli elementi sottostanti se necessario */
+  background: rgba(0,0,0,0.4);
+  pointer-events: none;
 }
 
-/* Contenitore principale della prima schermata */
+/* --- Layout Messaggio di Stato --- */
 #status-msg {
   display: flex;
   flex-direction: column;
@@ -26,7 +32,11 @@
   box-sizing: border-box;
 }
 
-/* Gruppo centrale per THE LINK */
+.logo-img {
+  width: 260px;
+  height: auto;
+}
+
 .middle-content {
   flex-grow: 1;
   display: flex;
@@ -35,11 +45,26 @@
   margin-top: -5px;
 }
 
-h1, h2 { 
+/* --- Testi --- */
+.main-title {
+  color: #fe5000; 
+  margin: 0;
+  font-size: 4.2em; 
+  line-height: 1.1;
+}
+
+.sub-title {
+  font-size: 0.9em; 
+  margin-top: -3px; 
+  opacity: 0.8;
+}
+
+h2 { 
   color: #fe5000; 
   margin: 0; 
 }
 
+/* --- Pulsante --- */
 .btn-start {
   background-color: #fe5000; 
   color: white; 
@@ -64,7 +89,7 @@ h1, h2 {
   display: none !important; 
 }
 
-/* Schermata calibrazione */
+/* --- Calibrazione --- */
 #calibration-msg {
   height: 100%;
   display: flex;
@@ -82,6 +107,7 @@ h1, h2 {
   animation: pulse 2s infinite;
 }
 
+/* --- Animazioni --- */
 @keyframes pulse { 
   0% { opacity: 0.4; } 
   50% { opacity: 1; } 
@@ -89,16 +115,21 @@ h1, h2 {
 }
 
 @keyframes pulse-button {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
+  0% { transform: scale(1); box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 4px 25px rgba(254, 80, 0, 0.7); }
+  100% { transform: scale(1); box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4); }
+}
+
+/* --- Media Queries (Responsive) --- */
+@media (max-width: 480px) {
+  .main-title {
+    font-size: 3em;
   }
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 4px 25px rgba(254, 80, 0, 0.7);
+  .logo-img {
+    width: 200px;
   }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
+  .btn-start {
+    padding: 15px 30px;
+    font-size: 1.2em;
   }
 }
