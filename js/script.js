@@ -1,4 +1,4 @@
-// 1. Registrazione Componente Colore
+// 1. Componente Colore con isolamento materiale
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { 
@@ -10,7 +10,6 @@ AFRAME.registerComponent('butterfly-color', {
     if (!mesh) return;
     const newColor = new THREE.Color(this.data.color);
     newColor.convertSRGBToLinear();
-    
     mesh.traverse((node) => {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
         if (!node.material._isCloned) {
@@ -29,28 +28,36 @@ AFRAME.registerComponent('butterfly-color', {
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 3. Gestione Start (Senza VR)
 function startExperience() {
-  // Richiesta permessi sensori (iOS)
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
     }).catch(console.error);
-  } else { 
-    proceed(); 
-  }
+  } else { proceed(); }
 }
 
 function proceed() {
   sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
-  
-  // Forza il motore AR a ricalcolare le dimensioni (risolve lo schermo nero/bloccato)
   window.dispatchEvent(new Event('resize'));
 }
 
-// 4. Controllo Calibrazione
+// 3. Wobble (Oscillazione)
+const addWobble = (el) => {
+  const amp = Math.random() * 0.4 + 0.1;
+  el.setAttribute('animation__wobble', {
+    property: 'object3D.position.y',
+    from: el.object3D.position.y - amp,
+    to: el.object3D.position.y + amp,
+    dur: Math.random() * 1000 + 2000,
+    dir: 'alternate',
+    loop: true,
+    easing: 'easeInOutSine'
+  });
+};
+
+// 4. Trigger Calibrazione
 window.addEventListener('load', () => {
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
@@ -58,81 +65,69 @@ window.addEventListener('load', () => {
 
   const checkInterval = setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
-
-    // Usiamo il componente 'rotation' di A-Frame
     const rotation = camera.getAttribute('rotation');
-    
-    if (rotation) {
-      // Se il telefono è tenuto dritto davanti agli occhi
-      if (rotation.x > -25 && rotation.x < 25) {
-        experienceActivated = true;
-        overlay.classList.add('hidden');
-        createSwarm(swarm);
-        clearInterval(checkInterval);
-      }
+    if (rotation && Math.abs(rotation.x) < 25) {
+      experienceActivated = true;
+      overlay.classList.add('hidden');
+      createSwarm(swarm);
+      clearInterval(checkInterval);
     }
   }, 200);
 });
 
-// 5. Creazione Sciame (Ottimizzata)
+// 5. Creazione Sciame con Volume Reale e Sorpassi
 function createSwarm(swarmContainer) {
-  const numButterflies = 80; //
-  const tunnelLength = 28;   // Lunghezza totale del tunnel
-  const tunnelWidth = 7.5;    // Larghezza del tunnel
-  const tunnelHeight = 4;     // Altezza del tunnel
+  const numButterflies = 80;
+  const tunnelLength = 28; // Metri totali lungo X
   
   for (let i = 0; i < numButterflies; i++) {
     setTimeout(() => {
       const butterfly = document.createElement('a-entity');
       
-      butterfly.setAttribute('gltf-model', '#butterflyModel'); //
-      butterfly.setAttribute('scale', '0.2 0.15 0.2'); //
-      butterfly.setAttribute('butterfly-color', 'color: #ce0058'); //
+      // Definiamo un volume di spawn (Box) invece di una linea
+      const startX = tunnelLength / 2; // +14m (Inizio tunnel a destra)
+      const startY = (Math.random() * 4) + 0.5; // Altezza tra 0.5m e 4.5m
       
-      // DISTRIBUZIONE SPAZIALE:
-      // Partenza (X): Estrema destra del tunnel (+14 metri)
-      const startX = tunnelLength / 2; 
-      
-      // Altezza (Y): Distribuite tra 0.5m e 4.5m da terra
-      const startY = Math.random() * tunnelHeight + 0.5; 
-      
-      // Profondità (Z): Distribuite su tutta la larghezza del tunnel (da -1m a -8.5m davanti a te)
-      // Questo evita che siano tutte sulla tua linea di vista.
-      const startZ = -(Math.random() * tunnelWidth + 1.5); 
+      // PROFONDITÀ (Z): Fondamentale per evitare la fila indiana
+      // Distribuiamo tra -2m e -10m rispetto alla camera
+      const startZ = -(Math.random() * 8 + 2); 
 
-      butterfly.setAttribute('position', `${startX} ${startY} ${startZ}`); //
-      butterfly.setAttribute('rotation', '0 -90 0'); // Orientate verso sinistra
+      butterfly.setAttribute('gltf-model', '#butterflyModel');
+      butterfly.setAttribute('scale', '0.15 0.12 0.15'); // Leggermente più piccole per profondità
+      butterfly.setAttribute('butterfly-color', 'color: #ce0058');
+      butterfly.setAttribute('position', `${startX} ${startY} ${startZ}`);
+      butterfly.setAttribute('rotation', '0 -90 0');
 
       butterfly.addEventListener('model-loaded', () => {
-        butterfly.setAttribute('animation-mixer', 'clip: Flying'); //
+        butterfly.setAttribute('animation-mixer', 'clip: Flying');
         
-        const moveDur = 12000 + Math.random() * 6000;
+        // VELOCITÀ VARIABILE (Sorpassi): da 8 a 16 secondi per coprire il tunnel
+        const moveDur = 8000 + Math.random() * 8000; 
 
-        // Movimento da destra (+14) a sinistra (-14)
+        // Movimento orizzontale
         butterfly.setAttribute('animation__move', {
           property: 'position.x',
-          to: -startX, 
+          to: -startX, // Arriva a -14m (Fine tunnel a sinistra)
           dur: moveDur,
           easing: 'linear',
           loop: true
         });
 
-        // Cambio colore graduale con offset casuale per non farle cambiare tutte insieme
+        // Colore sincronizzato alla velocità
         butterfly.setAttribute('animation__color', {
           property: 'butterfly-color.color',
           from: '#ce0058',
           to: '#fe5000',
-          dur: moveDur * 0.6,
+          dur: moveDur * 0.7,
           easing: 'linear',
           dir: 'alternate',
           loop: true
         });
 
-        // Aggiungiamo un leggero movimento casuale alto/basso per non farle sembrare proiettili
-        addWobble(butterfly); 
+        addWobble(butterfly);
       });
 
       swarmContainer.appendChild(butterfly);
-    }, i * 150); // Ingresso cadenzato per creare il flusso continuo
+    }, i * 120); // Flusso continuo
   }
 }
