@@ -1,4 +1,4 @@
-// 1. Registrazione Componente Personalizzato per il Colore
+// 1. REGISTRAZIONE COMPONENTE (Mantiene i colori fucsia -> arancio)
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
@@ -18,11 +18,25 @@ AFRAME.registerComponent('butterfly-color', {
   }
 });
 
-// 2. Variabili di Stato
+// --- NUOVA FUNZIONE PER IL MOVIMENTO LIBERO (Inserita qui alla riga 25) ---
+// Questa funzione dice alla scena: "Quando entri in AR, resetta lo zero sulla posizione dell'utente"
+document.addEventListener('DOMContentLoaded', () => {
+  const sceneEl = document.querySelector('a-scene');
+  sceneEl.addEventListener('enter-vr', () => {
+    if (sceneEl.is('ar-mode')) {
+      const cameraEl = document.querySelector('#main-camera');
+      // Fissiamo la posizione iniziale per permettere all'utente di camminare
+      cameraEl.setAttribute('position', '0 0 0');
+      console.log("Modalità Movimento Libero (6DOF) attivata.");
+    }
+  });
+});
+
+// 2. VARIABILI DI STATO
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 3. Gestione Permessi
+// 3. GESTIONE PERMESSI
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
@@ -39,7 +53,7 @@ function proceed() {
   document.getElementById('calibration-msg').classList.remove('hidden');
 }
 
-// 4. Controllo Calibrazione e Attivazione
+// 4. LOGICA DI ATTIVAZIONE (Unificata e pulita)
 window.addEventListener('load', () => {
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
@@ -50,9 +64,8 @@ window.addEventListener('load', () => {
 
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
-      
-      // Attivazione quando il telefono è verticale (pitch tra -20° e 20°)
-      if (rotation && rotation.x > -20 && rotation.x < 20) {
+      // Controllo posizione verticale (pitch tra -25 e 25 gradi)
+      if (rotation && rotation.x > -25 && rotation.x < 25) {
         experienceActivated = true;
         overlay.classList.add('hidden'); 
         createSwarm(swarm);
@@ -61,16 +74,14 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
+// 5. GENERAZIONE SCIAME (Dimensioni tunnel 28m x 7.5m)
 function createSwarm(swarmContainer) {
   const numButterflies = 150;
-  
-  // DIMENSIONI REALI (metri)
   const tunnelLength = 28; 
   const tunnelWidth = 7.5;
   const tunnelHeight = 4;
-  const groundOffset = 0.5; // Sollevamento indicato in planimetria
-  const povDistance = 1;    // Distanza dal punto viola alla zona rossa
+  const groundOffset = 0.5; // Tunnel sollevato di 50cm
+  const povDistance = 1;    // Distanza di 1m dal punto di vista
 
   const rows = 12; 
   const cols = 13;
@@ -79,9 +90,7 @@ function createSwarm(swarmContainer) {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       grid.push({ 
-        // Y: Parte da 0.5m e sale fino a 4.5m
         y: (r / (rows - 1)) * tunnelHeight + groundOffset,
-        // Z: Parte da 1m di distanza e copre i 7.5m di larghezza
         z: -((c / (cols - 1)) * tunnelWidth + povDistance)
       });
     }
@@ -98,38 +107,29 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
     const resetButterfly = (el) => {
-      // X: Copre i 28 metri del tunnel (da +14 a -14 rispetto al centro)
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
-      
-      const moveDuration = Math.random() * 4000 + 10000; // Più lente dato che il tunnel è lungo
-      const colorDuration = moveDuration * 0.7; 
+      const moveDuration = Math.random() * 5000 + 10000;
       
       el.setAttribute('position', `${startX} ${slot.y} ${slot.z}`);
       el.setAttribute('rotation', '0 -90 0');
       
+      el.removeAttribute('animation__move');
+      el.removeAttribute('animation__color');
+      
       el.setAttribute('animation__move', {
-        property: 'position', 
-        to: `${endX} ${slot.y} ${slot.z}`,
-        dur: moveDuration, 
-        easing: 'linear'
+        property: 'position', to: `${endX} ${slot.y} ${slot.z}`,
+        dur: moveDuration, easing: 'linear'
       });
       
       el.setAttribute('animation__color', {
-        property: 'butterfly-color.color', 
-        from: '#ce0058', 
-        to: '#fe5000',
-        dur: colorDuration, 
-        easing: 'linear',
-        loop: false
+        property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000',
+        dur: moveDuration, easing: 'linear'
       });
     };
 
-    butterfly.addEventListener('animationcomplete__move', () => {
-      resetButterfly(butterfly);
-    });
+    butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly));
 
-    // Partenza distribuita per creare l'effetto flusso continuo
     setTimeout(() => {
       swarmContainer.appendChild(butterfly);
       resetButterfly(butterfly);
