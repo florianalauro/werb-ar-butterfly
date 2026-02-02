@@ -1,84 +1,85 @@
-/* --- Reset e Base --- */
+/* Reset e stili base corpo */
 body {
   margin: 0;
   overflow: hidden;
-  background-color: transparent;
 }
 
-/* Forziamo l'overlay sopra il canvas di A-Frame */
 #overlay {
   position: fixed; 
   top: 0; 
   left: 0; 
   width: 100%; 
   height: 100%;
-  background: rgba(0, 0, 0, 0.95); 
-  color: transparent;
-  z-index: 99999 !important; /* Valore altissimo per stare sopra la camera */
+  background: rgba(0,0,0,0.9); 
+  color: white;
+  z-index: 1000; 
   font-family: sans-serif; 
   text-align: center;
-  display: flex;
-  flex-direction: column;
 }
 
 #overlay.semi-transparent {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0,0,0,0.4);
   pointer-events: none;
 }
 
-/* --- Layout Contenuto --- */
+/* Contenitore principale */
 #status-msg {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   height: 100%;
-  padding: 40px 20px 80px 20px;
+  padding: 20px 20px 100px 20px;
   box-sizing: border-box;
 }
 
+/* Logo */
 .logo-img {
   width: 260px;
-  max-width: 80%;
   height: auto;
 }
 
+/* Gruppo centrale */
 .middle-content {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  margin-top: -5px;
 }
 
-/* --- Testi --- */
 .main-title {
-  color: #fe5000; 
-  margin: 0;
-  font-size: 4.2em; 
+  font-size: 4.2em;
   line-height: 1.1;
-  font-weight: bold;
+  color: #fe5000;
+  margin: 0;
 }
 
 .sub-title {
-  font-size: 0.9em; 
-  margin-top: 5px; 
+  font-size: 0.9em;
+  margin-top: -3px;
   opacity: 0.8;
-  letter-spacing: 1px;
 }
 
-/* --- Pulsante --- */
+h2 { 
+  color: #fe5000; 
+  margin: 0; 
+}
+
+/* Bottone START */
 .btn-start {
   background-color: #fe5000; 
   color: white; 
   border: none;
-  padding: 20px 50px; 
+  padding: 18px 40px; 
   font-size: 1.4em; 
   border-radius: 50px;
   cursor: pointer; 
   font-weight: bold;
   box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
+  align-self: center;
+  margin-top: -15px;
   animation: pulse-button 2s infinite ease-in-out;
   transition: transform 0.2s ease;
-  z-index: 100000;
 }
 
 .btn-start:active {
@@ -89,39 +90,42 @@ body {
   display: none !important; 
 }
 
-/* --- Schermata Calibrazione --- */
+/* Schermata calibrazione */
 #calibration-msg {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .icon-frame {
-  width: 50px; 
-  height: 85px; 
+  width: 40px; 
+  height: 70px; 
   border: 3px solid #fe5000;
-  border-radius: 10px; 
-  margin: 0 auto 20px auto; 
+  border-radius: 8px; 
+  margin: 20px auto; 
   animation: pulse 2s infinite;
 }
 
-/* --- Animazioni --- */
+/* Animazioni */
 @keyframes pulse { 
-  0% { opacity: 0.4; transform: scale(0.9); } 
-  50% { opacity: 1; transform: scale(1); } 
-  100% { opacity: 0.4; transform: scale(0.9); } 
+  0% { opacity: 0.4; } 
+  50% { opacity: 1; } 
+  100% { opacity: 0.4; } 
 }
 
 @keyframes pulse-button {
-  0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4); }
-  50% { transform: scale(1.05); box-shadow: 0 4px 25px rgba(254, 80, 0, 0.7); }
-}
-
-/* --- Media Queries --- */
-@media (max-width: 480px) {
-  .main-title { font-size: 3.2em; }
-  .logo-img { width: 180px; }
-  .btn-start { padding: 15px 40px; font-size: 1.2em; }
+  0% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 4px 25px rgba(254, 80, 0, 0.7);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
+  }
 }
