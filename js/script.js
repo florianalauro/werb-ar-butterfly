@@ -12,7 +12,7 @@ AFRAME.registerComponent('butterfly-color', {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
         node.material.color.copy(newColor);
         node.material.emissive.copy(newColor); 
-        node.material.emissiveIntensity = 15;        
+        node.material.emissiveIntensity = 2;        
       }
     });
   }
@@ -66,25 +66,6 @@ window.addEventListener('load', () => {
         overlay.classList.add('hidden'); // Nasconde tutto l'overlay
         createSwarm(swarm);
       }
-    }
-  }, 200);
-});
-
-// 4. Logica di Calibrazione e Generazione Sciame
-window.addEventListener('load', () => {
-  const swarm = document.querySelector('#swarm');
-  const camera = document.querySelector('#main-camera');
-  const overlay = document.querySelector('#overlay');
-
-  setInterval(() => {
-    if (!sensorsActive || experienceActivated) return;
-    const rotation = camera.getAttribute('rotation');
-    
-    // Controlla se il dispositivo è in posizione verticale
-    if (rotation && rotation.x > -20 && rotation.x < 20) {
-      experienceActivated = true;
-      overlay.classList.add('hidden');
-      createSwarm(swarm);
     }
   }, 200);
 });
