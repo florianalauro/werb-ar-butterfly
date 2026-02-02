@@ -64,8 +64,8 @@ window.addEventListener('load', () => {
 
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
-      // Controllo posizione verticale (pitch tra -25 e 25 gradi)
-      if (rotation && rotation.x > -25 && rotation.x < 25) {
+      // Controllo posizione verticale (pitch tra -20 e 20 gradi)
+      if (rotation && rotation.x > -20 && rotation.x < 20) {
         experienceActivated = true;
         overlay.classList.add('hidden'); 
         createSwarm(swarm);
@@ -79,9 +79,9 @@ function createSwarm(swarmContainer) {
   const numButterflies = 150;
   const tunnelLength = 28; 
   const tunnelWidth = 7.5;
-  const tunnelHeight = 4;
+  const tunnelHeight = 3;
   const groundOffset = 0.5; // Tunnel sollevato di 50cm
-  const povDistance = 1;    // Distanza di 1m dal punto di vista
+  const povDistance = 1.5;    // Distanza di 1m dal punto di vista
 
   const rows = 12; 
   const cols = 13;
@@ -103,7 +103,7 @@ function createSwarm(swarmContainer) {
     
     butterfly.setAttribute('gltf-model', '#butterflyModel');
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
-    butterfly.setAttribute('scale', '0.35 0.35 0.35');
+    butterfly.setAttribute('scale', '0.25 0.25 0.25');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
     const resetButterfly = (el) => {
