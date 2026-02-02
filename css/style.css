@@ -2,38 +2,43 @@
 body {
   margin: 0;
   overflow: hidden;
+  background-color: #000;
 }
 
+/* Forziamo l'overlay sopra il canvas di A-Frame */
 #overlay {
   position: fixed; 
   top: 0; 
   left: 0; 
   width: 100%; 
   height: 100%;
-  background: rgba(0,0,0,0.9); 
+  background: rgba(0, 0, 0, 0.95); 
   color: white;
-  z-index: 1000; 
+  z-index: 99999 !important; /* Valore altissimo per stare sopra la camera */
   font-family: sans-serif; 
   text-align: center;
+  display: flex;
+  flex-direction: column;
 }
 
 #overlay.semi-transparent {
-  background: rgba(0,0,0,0.4);
+  background: rgba(0, 0, 0, 0.5);
   pointer-events: none;
 }
 
-/* --- Layout Messaggio di Stato --- */
+/* --- Layout Contenuto --- */
 #status-msg {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   height: 100%;
-  padding: 20px 20px 100px 20px;
+  padding: 40px 20px 80px 20px;
   box-sizing: border-box;
 }
 
 .logo-img {
   width: 260px;
+  max-width: 80%;
   height: auto;
 }
 
@@ -42,7 +47,6 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  margin-top: -5px;
 }
 
 /* --- Testi --- */
@@ -51,17 +55,14 @@ body {
   margin: 0;
   font-size: 4.2em; 
   line-height: 1.1;
+  font-weight: bold;
 }
 
 .sub-title {
   font-size: 0.9em; 
-  margin-top: -3px; 
+  margin-top: 5px; 
   opacity: 0.8;
-}
-
-h2 { 
-  color: #fe5000; 
-  margin: 0; 
+  letter-spacing: 1px;
 }
 
 /* --- Pulsante --- */
@@ -69,16 +70,15 @@ h2 {
   background-color: #fe5000; 
   color: white; 
   border: none;
-  padding: 18px 40px; 
+  padding: 20px 50px; 
   font-size: 1.4em; 
   border-radius: 50px;
   cursor: pointer; 
   font-weight: bold;
   box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
-  align-self: center;
-  margin-top: -15px;
   animation: pulse-button 2s infinite ease-in-out;
   transition: transform 0.2s ease;
+  z-index: 100000;
 }
 
 .btn-start:active {
@@ -89,47 +89,39 @@ h2 {
   display: none !important; 
 }
 
-/* --- Calibrazione --- */
+/* --- Schermata Calibrazione --- */
 #calibration-msg {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
 }
 
 .icon-frame {
-  width: 40px; 
-  height: 70px; 
+  width: 50px; 
+  height: 85px; 
   border: 3px solid #fe5000;
-  border-radius: 8px; 
-  margin: 20px auto; 
+  border-radius: 10px; 
+  margin: 0 auto 20px auto; 
   animation: pulse 2s infinite;
 }
 
 /* --- Animazioni --- */
 @keyframes pulse { 
-  0% { opacity: 0.4; } 
-  50% { opacity: 1; } 
-  100% { opacity: 0.4; } 
+  0% { opacity: 0.4; transform: scale(0.9); } 
+  50% { opacity: 1; transform: scale(1); } 
+  100% { opacity: 0.4; transform: scale(0.9); } 
 }
 
 @keyframes pulse-button {
-  0% { transform: scale(1); box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4); }
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4); }
   50% { transform: scale(1.05); box-shadow: 0 4px 25px rgba(254, 80, 0, 0.7); }
-  100% { transform: scale(1); box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4); }
 }
 
-/* --- Media Queries (Responsive) --- */
+/* --- Media Queries --- */
 @media (max-width: 480px) {
-  .main-title {
-    font-size: 3em;
-  }
-  .logo-img {
-    width: 200px;
-  }
-  .btn-start {
-    padding: 15px 30px;
-    font-size: 1.2em;
-  }
+  .main-title { font-size: 2.8em; }
+  .logo-img { width: 180px; }
+  .btn-start { padding: 15px 40px; font-size: 1.2em; }
 }
