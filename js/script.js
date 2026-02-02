@@ -94,7 +94,7 @@ function createSwarm(swarmContainer) {
     
     butterfly.setAttribute('gltf-model', '#butterflyModel');
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
-    butterfly.setAttribute('scale', '0.25 0.20 0.25');
+    butterfly.setAttribute('scale', '0.15 0.10 0.15');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
     const resetButterfly = (el) => {
