@@ -63,7 +63,7 @@ window.addEventListener('load', () => {
 
 // 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
 function createSwarm(swarmContainer) {
-  const numButterflies = 150;
+  const numButterflies = 90;
   
   // DIMENSIONI REALI (metri)
   const tunnelLength = 28; 
