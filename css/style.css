@@ -2,7 +2,7 @@
 body {
   margin: 0;
   overflow: hidden;
-  background-color: #000;
+  background-color: transparent;
 }
 
 /* Forziamo l'overlay sopra il canvas di A-Frame */
