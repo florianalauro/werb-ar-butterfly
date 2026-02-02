@@ -37,6 +37,7 @@ function proceed() {
   sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
+  document.getElementById('overlay').classList.add('semi-transparent');
 }
 
 // 4. Controllo Calibrazione e Attivazione
