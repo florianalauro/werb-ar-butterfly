@@ -1,3 +1,12 @@
+// Nasconde il caricamento quando il modello è pronto
+window.addEventListener('load', () => {
+  const loader = document.getElementById('loader');
+  // Aspettiamo un piccolo extra di 500ms per sicurezza grafica
+  setTimeout(() => {
+    loader.classList.add('hidden'); 
+  }, 500);
+});
+
 // 1. Registrazione Componente Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
