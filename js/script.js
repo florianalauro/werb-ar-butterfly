@@ -1,9 +1,7 @@
-// 1. Componente Colore con isolamento materiale
+// 1. Registrazione Componente Personalizzato per il Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
-  init: function () { 
-    this.el.addEventListener('model-loaded', () => this.applyColor()); 
-  },
+  init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
   update: function () { this.applyColor(); },
   applyColor: function () {
     const mesh = this.el.getObject3D('mesh');
@@ -12,13 +10,9 @@ AFRAME.registerComponent('butterfly-color', {
     newColor.convertSRGBToLinear();
     mesh.traverse((node) => {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
-        if (!node.material._isCloned) {
-          node.material = node.material.clone();
-          node.material._isCloned = true;
-        }
         node.material.color.copy(newColor);
         node.material.emissive.copy(newColor); 
-        node.material.emissiveIntensity = 2;       
+        node.material.emissiveIntensity = 15;        
       }
     });
   }
@@ -28,106 +22,117 @@ AFRAME.registerComponent('butterfly-color', {
 let sensorsActive = false;
 let experienceActivated = false;
 
+// 3. Gestione Permessi
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
     }).catch(console.error);
-  } else { proceed(); }
+  } else { 
+    proceed(); 
+  }
 }
 
 function proceed() {
   sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
-  window.dispatchEvent(new Event('resize'));
 }
 
-// 3. Wobble (Oscillazione)
-const addWobble = (el) => {
-  const amp = Math.random() * 0.4 + 0.1;
-  el.setAttribute('animation__wobble', {
-    property: 'object3D.position.y',
-    from: el.object3D.position.y - amp,
-    to: el.object3D.position.y + amp,
-    dur: Math.random() * 1000 + 2000,
-    dir: 'alternate',
-    loop: true,
-    easing: 'easeInOutSine'
-  });
-};
-
-// 4. Trigger Calibrazione
+// 4. Controllo Calibrazione e Attivazione
 window.addEventListener('load', () => {
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
   const overlay = document.querySelector('#overlay');
 
-  const checkInterval = setInterval(() => {
+  setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
-    const rotation = camera.getAttribute('rotation');
-    if (rotation && Math.abs(rotation.x) < 25) {
-      experienceActivated = true;
-      overlay.classList.add('hidden');
-      createSwarm(swarm);
-      clearInterval(checkInterval);
+
+    if (camera.object3D) {
+      const rotation = camera.getAttribute('rotation');
+      
+      // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
+      if (rotation && rotation.x > -25 && rotation.x < 25) {
+        experienceActivated = true;
+        overlay.classList.add('hidden'); 
+        createSwarm(swarm);
+      }
     }
   }, 200);
 });
 
-// 5. Creazione Sciame con Volume Reale e Sorpassi
+// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
 function createSwarm(swarmContainer) {
-  const numButterflies = 80;
-  const tunnelLength = 28; // Metri totali lungo X
+  const numButterflies = 90;
   
-  for (let i = 0; i < numButterflies; i++) {
-    setTimeout(() => {
-      const butterfly = document.createElement('a-entity');
-      
-      // Definiamo un volume di spawn (Box) invece di una linea
-      const startX = tunnelLength / 2; // +14m (Inizio tunnel a destra)
-      const startY = (Math.random() * 4) + 0.5; // Altezza tra 0.5m e 4.5m
-      
-      // PROFONDITÀ (Z): Fondamentale per evitare la fila indiana
-      // Distribuiamo tra -2m e -10m rispetto alla camera
-      const startZ = -(Math.random() * 8 + 2); 
+  // DIMENSIONI REALI (metri)
+  const tunnelLength = 28; 
+  const tunnelWidth = 7.5;
+  const tunnelHeight = 4;
+  const groundOffset = 0.5; // Sollevamento indicato in planimetria
+  const povDistance = 1;    // Distanza dal punto viola alla zona rossa
 
-      butterfly.setAttribute('gltf-model', '#butterflyModel');
-      butterfly.setAttribute('scale', '0.15 0.12 0.15'); // Leggermente più piccole per profondità
-      butterfly.setAttribute('butterfly-color', 'color: #ce0058');
-      butterfly.setAttribute('position', `${startX} ${startY} ${startZ}`);
-      butterfly.setAttribute('rotation', '0 -90 0');
-
-      butterfly.addEventListener('model-loaded', () => {
-        butterfly.setAttribute('animation-mixer', 'clip: Flying');
-        
-        // VELOCITÀ VARIABILE (Sorpassi): da 8 a 16 secondi per coprire il tunnel
-        const moveDur = 8000 + Math.random() * 8000; 
-
-        // Movimento orizzontale
-        butterfly.setAttribute('animation__move', {
-          property: 'position.x',
-          to: -startX, // Arriva a -14m (Fine tunnel a sinistra)
-          dur: moveDur,
-          easing: 'linear',
-          loop: true
-        });
-
-        // Colore sincronizzato alla velocità
-        butterfly.setAttribute('animation__color', {
-          property: 'butterfly-color.color',
-          from: '#ce0058',
-          to: '#fe5000',
-          dur: moveDur * 0.7,
-          easing: 'linear',
-          dir: 'alternate',
-          loop: true
-        });
-
-        addWobble(butterfly);
+  const rows = 12; 
+  const cols = 13;
+  
+  let grid = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      grid.push({ 
+        // Y: Parte da 0.5m e sale fino a 4.5m
+        y: (r / (rows - 1)) * tunnelHeight + groundOffset,
+        // Z: Parte da 1m di distanza e copre i 7.5m di larghezza
+        z: -((c / (cols - 1)) * tunnelWidth + povDistance)
       });
+    }
+  }
+  grid.sort(() => Math.random() - 0.5);
 
+  for (let i = 0; i < numButterflies; i++) {
+    let butterfly = document.createElement('a-entity');
+    const slot = grid[i % grid.length];
+    
+    butterfly.setAttribute('gltf-model', '#butterflyModel');
+    butterfly.setAttribute('animation-mixer', 'clip: Flying');
+    butterfly.setAttribute('scale', '0.2 0.15 0.2');
+    butterfly.setAttribute('butterfly-color', 'color: #ce0058');
+
+    const resetButterfly = (el) => {
+      // X: Copre i 28 metri del tunnel (da +14 a -14 rispetto al centro)
+      const startX = tunnelLength / 2;
+      const endX = -(tunnelLength / 2);
+      
+      const moveDuration = Math.random() * 4000 + 10000; // Più lente dato che il tunnel è lungo
+      const colorDuration = moveDuration * 0.7; 
+      
+      el.setAttribute('position', `${startX} ${slot.y} ${slot.z}`);
+      el.setAttribute('rotation', '0 -90 0');
+      
+      el.setAttribute('animation__move', {
+        property: 'position', 
+        to: `${endX} ${slot.y} ${slot.z}`,
+        dur: moveDuration, 
+        easing: 'linear'
+      });
+      
+      el.setAttribute('animation__color', {
+        property: 'butterfly-color.color', 
+        from: '#ce0058', 
+        to: '#fe5000',
+        dur: colorDuration, 
+        easing: 'linear',
+        loop: false
+      });
+    };
+
+    butterfly.addEventListener('animationcomplete__move', () => {
+      resetButterfly(butterfly);
+    });
+
+    // Partenza distribuita per creare l'effetto flusso continuo
+    setTimeout(() => {
       swarmContainer.appendChild(butterfly);
-    }, i * 120); // Flusso continuo
+      resetButterfly(butterfly);
+    }, Math.random() * 12000);
   }
 }
