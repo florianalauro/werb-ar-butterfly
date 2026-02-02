@@ -12,7 +12,7 @@ AFRAME.registerComponent('butterfly-color', {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
         node.material.color.copy(newColor);
         node.material.emissive.copy(newColor); 
-        node.material.emissiveIntensity = 10;        
+        node.material.emissiveIntensity = 15;        
       }
     });
   }
