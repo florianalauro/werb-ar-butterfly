@@ -76,49 +76,63 @@ window.addEventListener('load', () => {
 
 // 5. Creazione Sciame (Ottimizzata)
 function createSwarm(swarmContainer) {
-  const numButterflies = 70;
-  const tunnelLength = 28;
+  const numButterflies = 80; //
+  const tunnelLength = 28;   // Lunghezza totale del tunnel
+  const tunnelWidth = 7.5;    // Larghezza del tunnel
+  const tunnelHeight = 4;     // Altezza del tunnel
   
   for (let i = 0; i < numButterflies; i++) {
     setTimeout(() => {
       const butterfly = document.createElement('a-entity');
       
-      butterfly.setAttribute('gltf-model', '#butterflyModel');
-      butterfly.setAttribute('scale', '0.2 0.15 0.2');
-      butterfly.setAttribute('butterfly-color', 'color: #ce0058');
+      butterfly.setAttribute('gltf-model', '#butterflyModel'); //
+      butterfly.setAttribute('scale', '0.2 0.15 0.2'); //
+      butterfly.setAttribute('butterfly-color', 'color: #ce0058'); //
       
-      const startX = tunnelLength / 2; // Inizia a +14m
-      const startY = Math.random() * 4 + 0.5;
-      const startZ = -(Math.random() * 7 + 1);
+      // DISTRIBUZIONE SPAZIALE:
+      // Partenza (X): Estrema destra del tunnel (+14 metri)
+      const startX = tunnelLength / 2; 
+      
+      // Altezza (Y): Distribuite tra 0.5m e 4.5m da terra
+      const startY = Math.random() * tunnelHeight + 0.5; 
+      
+      // Profondità (Z): Distribuite su tutta la larghezza del tunnel (da -1m a -8.5m davanti a te)
+      // Questo evita che siano tutte sulla tua linea di vista.
+      const startZ = -(Math.random() * tunnelWidth + 1.5); 
 
-      butterfly.setAttribute('position', `${startX} ${startY} ${startZ}`);
-      butterfly.setAttribute('rotation', '0 -90 0');
+      butterfly.setAttribute('position', `${startX} ${startY} ${startZ}`); //
+      butterfly.setAttribute('rotation', '0 -90 0'); // Orientate verso sinistra
 
       butterfly.addEventListener('model-loaded', () => {
-        butterfly.setAttribute('animation-mixer', 'clip: Flying');
+        butterfly.setAttribute('animation-mixer', 'clip: Flying'); //
         
-        // Movimento lineare
+        const moveDur = 12000 + Math.random() * 6000;
+
+        // Movimento da destra (+14) a sinistra (-14)
         butterfly.setAttribute('animation__move', {
           property: 'position.x',
-          to: -startX, // Arriva a -14m
-          dur: 12000 + Math.random() * 4000,
+          to: -startX, 
+          dur: moveDur,
           easing: 'linear',
           loop: true
         });
 
-        // Cambio colore graduale
+        // Cambio colore graduale con offset casuale per non farle cambiare tutte insieme
         butterfly.setAttribute('animation__color', {
           property: 'butterfly-color.color',
           from: '#ce0058',
           to: '#fe5000',
-          dur: 8000,
+          dur: moveDur * 0.6,
           easing: 'linear',
           dir: 'alternate',
           loop: true
         });
+
+        // Aggiungiamo un leggero movimento casuale alto/basso per non farle sembrare proiettili
+        addWobble(butterfly); 
       });
 
       swarmContainer.appendChild(butterfly);
-    }, i * 150);
+    }, i * 150); // Ingresso cadenzato per creare il flusso continuo
   }
 }
