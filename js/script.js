@@ -1,4 +1,4 @@
-// 1. Registrazione Componente Personalizzato per il Colore e le Emissioni
+// 1. Registrazione Componente Personalizzato per il Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
@@ -22,7 +22,7 @@ AFRAME.registerComponent('butterfly-color', {
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 3. Gestione Permessi (Invocata dal bottone START nel file HTML)
+// 3. Gestione Permessi
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
@@ -35,18 +35,15 @@ function startExperience() {
 
 function proceed() {
   sensorsActive = true;
-  const overlay = document.getElementById('overlay');
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
-  // Rende lo sfondo semi-trasparente per vedere la camera durante la calibrazione
-  overlay.classList.add('semi-transparent'); 
 }
 
-// 4. Controllo Calibrazione e Attivazione Automatica
+// 4. Controllo Calibrazione e Attivazione
 window.addEventListener('load', () => {
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
-  const overlay = document.getElementById('overlay');
+  const overlay = document.querySelector('#overlay');
 
   setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
@@ -57,21 +54,23 @@ window.addEventListener('load', () => {
       // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
       if (rotation && rotation.x > -25 && rotation.x < 25) {
         experienceActivated = true;
-        overlay.classList.add('hidden'); // Nasconde l'overlay e mostra lo sciame
+        overlay.classList.add('hidden'); 
         createSwarm(swarm);
       }
     }
   }, 200);
 });
 
-// 5. Logica dello Sciame (Tunnel 28m x 7.5m) con Oscillazione
+// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
+  
+  // DIMENSIONI REALI (metri)
   const tunnelLength = 28; 
   const tunnelWidth = 7.5;
   const tunnelHeight = 4;
-  const groundOffset = 0.5;
-  const povDistance = 1;
+  const groundOffset = 0.5; // Sollevamento indicato in planimetria
+  const povDistance = 1;    // Distanza dal punto viola alla zona rossa
 
   const rows = 12; 
   const cols = 13;
@@ -80,7 +79,9 @@ function createSwarm(swarmContainer) {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       grid.push({ 
+        // Y: Parte da 0.5m e sale fino a 4.5m
         y: (r / (rows - 1)) * tunnelHeight + groundOffset,
+        // Z: Parte da 1m di distanza e copre i 7.5m di larghezza
         z: -((c / (cols - 1)) * tunnelWidth + povDistance)
       });
     }
@@ -96,55 +97,42 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-    const resetButterfly = (el, isFirstSpawn = false) => {
+    const resetButterfly = (el) => {
+      // X: Copre i 28 metri del tunnel (da +14 a -14 rispetto al centro)
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
       
-      // Primo spawn: le distribuiamo casualmente lungo il tunnel per non avere il vuoto iniziale
-      const currentX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
+      const moveDuration = Math.random() * 4000 + 10000; // Più lente dato che il tunnel è lungo
+      const colorDuration = moveDuration * 0.7; 
       
-      const moveDuration = Math.random() * 5000 + 12000; 
-      const distanceFactor = isFirstSpawn ? ((currentX - endX) / tunnelLength) : 1;
-
-      el.setAttribute('position', `${currentX} ${slot.y} ${slot.z}`);
+      el.setAttribute('position', `${startX} ${slot.y} ${slot.z}`);
       el.setAttribute('rotation', '0 -90 0');
       
-      // Animazione 1: Movimento orizzontale (X)
       el.setAttribute('animation__move', {
-        property: 'position.x', 
-        to: endX,
-        dur: moveDuration * distanceFactor, 
+        property: 'position', 
+        to: `${endX} ${slot.y} ${slot.z}`,
+        dur: moveDuration, 
         easing: 'linear'
       });
       
-      // Animazione 2: Cambio colore (dal fucsia all'arancio)
       el.setAttribute('animation__color', {
         property: 'butterfly-color.color', 
         from: '#ce0058', 
         to: '#fe5000',
-        dur: moveDuration * 0.8, 
-        easing: 'linear'
-      });
-
-      // Animazione 3: Oscillazione Verticale (Bobbing)
-      el.setAttribute('animation__bob', {
-        property: 'position.y',
-        from: slot.y - 0.15,
-        to: slot.y + 0.15,
-        dur: Math.random() * 1000 + 1500,
-        dir: 'alternate',
-        loop: true,
-        easing: 'easeInOutSine'
+        dur: colorDuration, 
+        easing: 'linear',
+        loop: false
       });
     };
 
     butterfly.addEventListener('animationcomplete__move', () => {
-      resetButterfly(butterfly, false);
+      resetButterfly(butterfly);
     });
 
+    // Partenza distribuita per creare l'effetto flusso continuo
     setTimeout(() => {
       swarmContainer.appendChild(butterfly);
-      resetButterfly(butterfly, true); 
-    }, i * 150); 
+      resetButterfly(butterfly);
+    }, Math.random() * 12000);
   }
 }
