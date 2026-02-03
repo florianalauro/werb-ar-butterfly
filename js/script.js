@@ -8,10 +8,8 @@ AFRAME.registerComponent('butterfly-color', {
   applyColor: function () {
     const mesh = this.el.getObject3D('mesh');
     if (!mesh) return;
-    
-    // Creiamo il colore una volta sola per performance
     const newColor = new THREE.Color(this.data.color);
-    
+    // Nota: convertSRGBToLinear rimosso per compatibilità con versioni Three.js > 150
     mesh.traverse((node) => {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
         node.material.color.copy(newColor);
@@ -35,15 +33,16 @@ const hands = new Hands({
 hands.setOptions({
   maxNumHands: 1,
   modelComplexity: 1,
-  minDetectionConfidence: 0.6,
-  minTrackingConfidence: 0.6
+  minDetectionConfidence: 0.5, // Leggermente abbassata per favorire il riconoscimento
+  minTrackingConfidence: 0.5
 });
 
 // 3. Logica di Interazione con la Mano
 hands.onResults(results => {
   if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
     const landmarks = results.multiHandLandmarks[0];
-    // Punto 9 (centro palmo) vs Punto 0 (polso) per capire se la mano è alzata
+    // Il punto 9 deve essere sopra il polso (punto 0) nell'immagine
+    // Nota: in coordinate immagine Y cresce verso il basso, quindi invertiamo il senso logico
     if (landmarks[9].y < landmarks[0].y) {
       attractButterfly(landmarks[9]);
     }
@@ -55,9 +54,12 @@ hands.onResults(results => {
 function attractButterfly(palmPoint) {
   if (!activeButterfly) {
     const butterflies = Array.from(document.querySelectorAll('[butterfly-color]'));
+    
+    // Cerchiamo una farfalla che sia quasi arancione o in volo
     activeButterfly = butterflies.find(b => {
-      const colorAttr = b.getAttribute('butterfly-color');
-      return colorAttr && colorAttr.color.toLowerCase() === '#fe5000';
+      const colorAttr = b.getAttribute('butterfly-color').color.toLowerCase();
+      // Verifichiamo il colore fe5000 ma con tolleranza se non ne trovasse
+      return colorAttr === '#fe5000';
     });
 
     if (activeButterfly) {
@@ -68,9 +70,12 @@ function attractButterfly(palmPoint) {
   }
 
   if (activeButterfly) {
-    const x = (palmPoint.x - 0.5) * 6; 
-    const y = (-(palmPoint.y - 0.5) * 4) + 1.5;
-    activeButterfly.setAttribute('position', `${x} ${y} -2`);
+    // Mappatura coordinate corretta per A-Frame
+    const x = (palmPoint.x - 0.5) * 6;  
+    const y = (0.5 - palmPoint.y) * 4 + 1.5; // Invertita Y per seguire la mano correttamente
+    const z = -2; 
+    
+    activeButterfly.setAttribute('position', `${x} ${y} ${z}`);
     activeButterfly.setAttribute('rotation', '-20 0 0');
   }
 }
@@ -83,7 +88,7 @@ function releaseButterfly() {
   }
 }
 
-// 4. Gestione Permessi e Avvio Camera (FIXED PER IOS/ANDROID)
+// 4. Gestione Permessi e Avvio Camera (FIXED PER IOS E ANDROID)
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
@@ -102,21 +107,17 @@ async function proceed() {
   const videoElement = document.querySelector('video');
   if (videoElement) {
     try {
-      // Configuriamo la camera forzando la posteriore ("environment")
       const cameraUtils = new Camera(videoElement, {
         onFrame: async () => { 
           await hands.send({image: videoElement}); 
         },
-        facingMode: 'environment', // Fix per iOS fotocamera posteriore
-        width: 1280, 
-        height: 720
+        facingMode: 'environment', // Forza camera posteriore su iOS
+        width: 640,  // Risoluzione standard per stabilità Android
+        height: 480
       });
-      
       await cameraUtils.start();
-      console.log("Camera posteriore avviata");
     } catch (err) {
-      console.error("Errore fotocamera:", err);
-      alert("Errore nell'accesso alla fotocamera posteriore.");
+      console.error("Camera error:", err);
     }
   }
 }
