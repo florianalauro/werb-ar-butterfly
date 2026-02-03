@@ -18,11 +18,74 @@ AFRAME.registerComponent('butterfly-color', {
   }
 });
 
-// 2. Variabili di Stato
+// 2. Variabili di Stato e Hand Tracking
 let sensorsActive = false;
 let experienceActivated = false;
+let activeButterfly = null;
+let lastResetData = new Map(); // Per memorizzare i dati di volo originali
 
-// 3. Gestione Permessi
+// Configurazione MediaPipe Hands
+const hands = new Hands({
+  locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+hands.setOptions({
+  maxNumHands: 1,
+  modelComplexity: 1,
+  minDetectionConfidence: 0.6,
+  minTrackingConfidence: 0.6
+});
+
+// 3. Logica di Interazione con la Mano
+hands.onResults(results => {
+  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+    const landmarks = results.multiHandLandmarks[0];
+    // Il punto 9 è il centro del palmo. Controlliamo se è rivolto verso l'alto
+    if (landmarks[9].y < landmarks[0].y) {
+      attractButterfly(landmarks[9]);
+    }
+  } else if (activeButterfly) {
+    releaseButterfly();
+  }
+});
+
+function attractButterfly(palmPoint) {
+  if (!activeButterfly) {
+    const butterflies = Array.from(document.querySelectorAll('[butterfly-color]'));
+    // Cerchiamo una farfalla che sia diventata arancione (#fe5000)
+    activeButterfly = butterflies.find(b => {
+      const color = b.getAttribute('butterfly-color').color.toLowerCase();
+      return color === '#fe5000' && b !== activeButterfly;
+    });
+
+    if (activeButterfly) {
+      // Salviamo lo stato per il ripristino
+      lastResetData.set(activeButterfly, activeButterfly.getAttribute('position'));
+      activeButterfly.removeAttribute('animation__move'); 
+      activeButterfly.setAttribute('animation-mixer', {timeScale: 0.3}); // Battito lento
+    }
+  }
+
+  if (activeButterfly) {
+    // Trasposizione coordinate MediaPipe (0-1) in spazio A-Frame
+    const x = (palmPoint.x - 0.5) * 6; 
+    const y = (-(palmPoint.y - 0.5) * 4) + 1.5;
+    const z = -2; // Profondità davanti alla camera
+    
+    activeButterfly.setAttribute('position', `${x} ${y} ${z}`);
+    activeButterfly.setAttribute('rotation', '-20 0 0'); // Leggermente inclinata verso l'utente
+  }
+}
+
+function releaseButterfly() {
+  if (activeButterfly) {
+    activeButterfly.setAttribute('animation-mixer', {timeScale: 1}); // Torna a volare normale
+    // Forziamo il completamento del ciclo per resettarla nel tunnel
+    activeButterfly.emit('animationcomplete__move'); 
+    activeButterfly = null;
+  }
+}
+
+// 4. Gestione Permessi
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
@@ -37,9 +100,19 @@ function proceed() {
   sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
+  
+  // Avvio tracciamento video
+  const videoElement = document.querySelector('video');
+  if (videoElement) {
+    const cameraUtils = new Camera(videoElement, {
+      onFrame: async () => { await hands.send({image: videoElement}); },
+      width: 1280, height: 720
+    });
+    cameraUtils.start();
+  }
 }
 
-// 4. Controllo Calibrazione e Attivazione
+// 5. Controllo Calibrazione e Attivazione
 window.addEventListener('load', () => {
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
@@ -50,8 +123,6 @@ window.addEventListener('load', () => {
 
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
-      
-      // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
       if (rotation && rotation.x > -25 && rotation.x < 25) {
         experienceActivated = true;
         overlay.classList.add('hidden'); 
@@ -61,17 +132,16 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
+// 6. Logica dello Sciame
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
-  
-  const tunnelLength = 28; 
+  const tunnelLength = 28;
   const tunnelWidth = 7.5;
   const tunnelHeight = 4;
   const groundOffset = 0.5;
   const povDistance = 1;
 
-  const rows = 12; 
+  const rows = 12;
   const cols = 13;
   
   let grid = [];
@@ -94,19 +164,11 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-    // Funzione di reset modificata
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
-      
-      // Se è la prima apparizione, spawniamo in un punto a caso lungo la X
-      // Altrimenti, partono sempre dall'inizio (startX)
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
-      
       const moveDuration = Math.random() * 4000 + 10000;
-      
-      // Calcoliamo una durata proporzionale alla distanza rimanente per il primo volo
-      // per evitare che le farfalle a metà tunnel vadano troppo lente
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
@@ -131,13 +193,10 @@ function createSwarm(swarmContainer) {
     };
 
     butterfly.addEventListener('animationcomplete__move', () => {
-      // Dal secondo volo in poi, isFirstSpawn è false (partono dal fondo)
       resetButterfly(butterfly, false);
     });
 
-    // Rimosso il setTimeout: aggiungiamo tutto subito
     swarmContainer.appendChild(butterfly);
-    // Passiamo true per distribuire le farfalle ovunque all'avvio
     resetButterfly(butterfly, true);
   }
 }
