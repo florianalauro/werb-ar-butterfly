@@ -124,7 +124,7 @@ function createSwarm(swarmContainer) {
         property: 'butterfly-color.color', 
         from: '#ce0058', 
         to: '#fe5000',
-        dur: currentDuration * 0.7, 
+        dur: currentDuration * 0.5, 
         easing: 'linear',
         loop: false
       });
