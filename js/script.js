@@ -9,7 +9,6 @@ AFRAME.registerComponent('butterfly-color', {
     const mesh = this.el.getObject3D('mesh');
     if (!mesh) return;
     const newColor = new THREE.Color(this.data.color);
-    // Nota: convertSRGBToLinear rimosso per compatibilità con versioni Three.js > 150
     mesh.traverse((node) => {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
         node.material.color.copy(newColor);
@@ -26,6 +25,9 @@ let experienceActivated = false;
 let activeButterfly = null;
 let lastResetData = new Map();
 
+// Riferimento al mirino visivo per il debug
+let handTrackerUI = null;
+
 const hands = new Hands({
   locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
 });
@@ -33,48 +35,59 @@ const hands = new Hands({
 hands.setOptions({
   maxNumHands: 1,
   modelComplexity: 1,
-  minDetectionConfidence: 0.5, // Leggermente abbassata per favorire il riconoscimento
+  minDetectionConfidence: 0.5,
   minTrackingConfidence: 0.5
 });
 
 // 3. Logica di Interazione con la Mano
 hands.onResults(results => {
+  if (!handTrackerUI) {
+    handTrackerUI = document.querySelector('#hand-debug-ui');
+  }
+
   if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
     const landmarks = results.multiHandLandmarks[0];
-    // Il punto 9 deve essere sopra il polso (punto 0) nell'immagine
-    // Nota: in coordinate immagine Y cresce verso il basso, quindi invertiamo il senso logico
+    
+    // Mostra il mirino di debug
+    if (handTrackerUI) handTrackerUI.setAttribute('visible', 'true');
+
+    // Il punto 9 deve essere sopra il polso (punto 0)
     if (landmarks[9].y < landmarks[0].y) {
       attractButterfly(landmarks[9]);
     }
-  } else if (activeButterfly) {
-    releaseButterfly();
+  } else {
+    // Nascondi mirino se la mano sparisce
+    if (handTrackerUI) handTrackerUI.setAttribute('visible', 'false');
+    if (activeButterfly) releaseButterfly();
   }
 });
 
 function attractButterfly(palmPoint) {
+  // Calcolo coordinate (mappate per AR)
+  const x = (palmPoint.x - 0.5) * 6;  
+  const y = (0.5 - palmPoint.y) * 4 + 1.5;
+  const z = -2;
+
+  // Aggiorna posizione mirino debug
+  if (handTrackerUI) {
+    handTrackerUI.setAttribute('position', `${x} ${y} ${z}`);
+  }
+
   if (!activeButterfly) {
     const butterflies = Array.from(document.querySelectorAll('[butterfly-color]'));
-    
-    // Cerchiamo una farfalla che sia quasi arancione o in volo
+    // CERCA FARFALLE ARANCIONI
     activeButterfly = butterflies.find(b => {
       const colorAttr = b.getAttribute('butterfly-color').color.toLowerCase();
-      // Verifichiamo il colore fe5000 ma con tolleranza se non ne trovasse
       return colorAttr === '#fe5000';
     });
 
     if (activeButterfly) {
-      lastResetData.set(activeButterfly, activeButterfly.getAttribute('position'));
       activeButterfly.removeAttribute('animation__move'); 
       activeButterfly.setAttribute('animation-mixer', {timeScale: 0.3});
     }
   }
 
   if (activeButterfly) {
-    // Mappatura coordinate corretta per A-Frame
-    const x = (palmPoint.x - 0.5) * 6;  
-    const y = (0.5 - palmPoint.y) * 4 + 1.5; // Invertita Y per seguire la mano correttamente
-    const z = -2; 
-    
     activeButterfly.setAttribute('position', `${x} ${y} ${z}`);
     activeButterfly.setAttribute('rotation', '-20 0 0');
   }
@@ -88,7 +101,7 @@ function releaseButterfly() {
   }
 }
 
-// 4. Gestione Permessi e Avvio Camera (FIXED PER IOS E ANDROID)
+// 4. Gestione Permessi e Avvio Camera
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
@@ -108,11 +121,9 @@ async function proceed() {
   if (videoElement) {
     try {
       const cameraUtils = new Camera(videoElement, {
-        onFrame: async () => { 
-          await hands.send({image: videoElement}); 
-        },
-        facingMode: 'environment', // Forza camera posteriore su iOS
-        width: 640,  // Risoluzione standard per stabilità Android
+        onFrame: async () => { await hands.send({image: videoElement}); },
+        facingMode: 'environment',
+        width: 640,
         height: 480
       });
       await cameraUtils.start();
@@ -122,7 +133,7 @@ async function proceed() {
   }
 }
 
-// 5. Controllo Calibrazione e Attivazione
+// 5. Controllo Calibrazione e Sciame (Invariato)
 window.addEventListener('load', () => {
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
@@ -130,7 +141,6 @@ window.addEventListener('load', () => {
 
   setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
-
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
       if (rotation && rotation.x > -25 && rotation.x < 25) {
@@ -142,25 +152,19 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// 6. Logica dello Sciame
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
   const tunnelLength = 28;
   const tunnelWidth = 7.5;
   const tunnelHeight = 4;
   const groundOffset = 0.5;
-  const povDistance = 1;
 
   const rows = 12;
   const cols = 13;
-  
   let grid = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      grid.push({ 
-        y: (r / (rows - 1)) * tunnelHeight + groundOffset,
-        z: -((c / (cols - 1)) * tunnelWidth + povDistance)
-      });
+      grid.push({ y: (r / (rows - 1)) * tunnelHeight + groundOffset, z: -((c / (cols - 1)) * tunnelWidth + 1) });
     }
   }
   grid.sort(() => Math.random() - 0.5);
@@ -168,7 +172,6 @@ function createSwarm(swarmContainer) {
   for (let i = 0; i < numButterflies; i++) {
     let butterfly = document.createElement('a-entity');
     const slot = grid[i % grid.length];
-    
     butterfly.setAttribute('gltf-model', '#butterflyModel');
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
@@ -176,36 +179,16 @@ function createSwarm(swarmContainer) {
 
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
-      const endX = -(tunnelLength / 2);
+      const endX = -startX;
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
       const moveDuration = Math.random() * 4000 + 10000;
-      const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
-      const currentDuration = moveDuration * distanceRatio;
-
       el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
       el.setAttribute('rotation', '0 -90 0');
-      
-      el.setAttribute('animation__move', {
-        property: 'position', 
-        to: `${endX} ${slot.y} ${slot.z}`,
-        dur: currentDuration, 
-        easing: 'linear'
-      });
-      
-      el.setAttribute('animation__color', {
-        property: 'butterfly-color.color', 
-        from: '#ce0058', 
-        to: '#fe5000',
-        dur: currentDuration * 0.5, 
-        easing: 'linear',
-        loop: false
-      });
+      el.setAttribute('animation__move', { property: 'position', to: `${endX} ${slot.y} ${slot.z}`, dur: moveDuration * (isFirstSpawn ? 0.5 : 1), easing: 'linear' });
+      el.setAttribute('animation__color', { property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000', dur: moveDuration * 0.5, easing: 'linear', loop: false });
     };
 
-    butterfly.addEventListener('animationcomplete__move', () => {
-      resetButterfly(butterfly, false);
-    });
-
+    butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly, false));
     swarmContainer.appendChild(butterfly);
     resetButterfly(butterfly, true);
   }
