@@ -61,13 +61,13 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
+// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
   
   const tunnelLength = 28; 
-  const tunnelWidth = 7.5;
-  const tunnelHeight = 4;
+  const tunnelWidth = 7.5; //9,5 - 2m circa di "passerella"
+  const tunnelHeight = 3.3;
   const groundOffset = 0.5;
   const povDistance = 1;
 
