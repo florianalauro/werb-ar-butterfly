@@ -22,25 +22,47 @@ AFRAME.registerComponent('butterfly-color', {
 let sensorsActive = false;
 let experienceActivated = false;
 
-// Gestione caricamento asset
+// 3. Gestione Caricamento e Permessi
 window.addEventListener('load', () => {
   const assets = document.querySelector('a-assets');
+  const scene = document.querySelector('a-scene');
   const btnStart = document.getElementById('btn-start');
   const loadingContainer = document.getElementById('loading-container');
+  const swarm = document.querySelector('#swarm');
+  const camera = document.querySelector('#main-camera');
+  const overlay = document.querySelector('#overlay');
 
   const enableButton = () => {
-    loadingContainer.classList.add('hidden');
-    btnStart.classList.remove('hidden');
+    if (!loadingContainer.classList.contains('hidden')) {
+      loadingContainer.classList.add('hidden');
+      btnStart.classList.remove('hidden');
+    }
   };
 
+  // Controllo robusto del caricamento
   if (assets.hasLoaded) {
     enableButton();
   } else {
     assets.addEventListener('loaded', enableButton);
+    scene.addEventListener('loaded', enableButton);
+    // Safety timeout: se dopo 5 secondi non ha caricato (es. problemi rete), sblocchiamo comunque
+    setTimeout(enableButton, 5000);
   }
+
+  // 4. Controllo Calibrazione e Attivazione
+  setInterval(() => {
+    if (!sensorsActive || experienceActivated) return;
+    if (camera.object3D) {
+      const rotation = camera.getAttribute('rotation');
+      if (rotation && rotation.x > -25 && rotation.x < 25) {
+        experienceActivated = true;
+        overlay.classList.add('hidden'); 
+        createSwarm(swarm);
+      }
+    }
+  }, 200);
 });
 
-// 3. Gestione Permessi
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
@@ -56,28 +78,6 @@ function proceed() {
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
 }
-
-// 4. Controllo Calibrazione e Attivazione
-window.addEventListener('load', () => {
-  const swarm = document.querySelector('#swarm');
-  const camera = document.querySelector('#main-camera');
-  const overlay = document.querySelector('#overlay');
-
-  setInterval(() => {
-    if (!sensorsActive || experienceActivated) return;
-
-    if (camera.object3D) {
-      const rotation = camera.getAttribute('rotation');
-      
-      // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
-      if (rotation && rotation.x > -25 && rotation.x < 25) {
-        experienceActivated = true;
-        overlay.classList.add('hidden'); 
-        createSwarm(swarm);
-      }
-    }
-  }, 200);
-});
 
 // 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
 function createSwarm(swarmContainer) {
