@@ -22,6 +22,23 @@ AFRAME.registerComponent('butterfly-color', {
 let sensorsActive = false;
 let experienceActivated = false;
 
+// Gestione caricamento asset
+window.addEventListener('load', () => {
+  const assets = document.querySelector('a-assets');
+  const btnStart = document.getElementById('btn-start');
+
+  const enableButton = () => {
+    btnStart.innerText = 'START';
+    btnStart.disabled = false;
+  };
+
+  if (assets.hasLoaded) {
+    enableButton();
+  } else {
+    assets.addEventListener('loaded', enableButton);
+  }
+});
+
 // 3. Gestione Permessi
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
