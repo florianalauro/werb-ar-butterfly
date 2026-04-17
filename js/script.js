@@ -64,6 +64,13 @@ window.addEventListener('load', () => {
 });
 
 function startExperience() {
+  const scene = document.querySelector('a-scene');
+  
+  // Se WebXR è supportato, proviamo ad attivarlo
+  if (scene.is('vr-mode') === false && scene.hasWebXR) {
+    scene.enterAR();
+  }
+
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
@@ -72,6 +79,17 @@ function startExperience() {
     proceed(); 
   }
 }
+
+// Listener per eventi WebXR
+window.addEventListener('load', () => {
+  const scene = document.querySelector('a-scene');
+  scene.addEventListener('enter-vr', () => {
+    if (scene.is('ar-mode')) {
+      console.log('WebXR AR session started');
+      // In WebXR, l'overlay HTML potrebbe dover essere gestito diversamente
+    }
+  });
+});
 
 function proceed() {
   sensorsActive = true;
