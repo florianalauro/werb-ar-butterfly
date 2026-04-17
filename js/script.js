@@ -26,10 +26,11 @@ let experienceActivated = false;
 window.addEventListener('load', () => {
   const assets = document.querySelector('a-assets');
   const btnStart = document.getElementById('btn-start');
+  const loadingContainer = document.getElementById('loading-container');
 
   const enableButton = () => {
-    btnStart.innerText = 'START';
-    btnStart.disabled = false;
+    loadingContainer.classList.add('hidden');
+    btnStart.classList.remove('hidden');
   };
 
   if (assets.hasLoaded) {
