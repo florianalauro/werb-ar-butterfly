@@ -41,11 +41,11 @@
     </div>
 
     <a-scene 
-      embedded 
-      arjs="sourceType: webcam; debugUIEnabled: false;" 
-      renderer="colorManagement: true; antialias: true; logarithmicDepthBuffer: true;" 
-      xr-mode-ui="enabled: true; enterAREnabled: true; XRMode: ar;"
-      webxr="optionalFeatures: hit-test, local-floor, dom-overlay; overlayElement: #overlay;">
+      webxr="optionalFeatures: hit-test, local-floor, dom-overlay; overlayElement: #overlay;"
+      xr-mode-ui="enabled: false"
+      renderer="colorManagement: true; antialias: true; logarithmicDepthBuffer: true; precision: high;"
+      embedded
+      arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;">
       
       <a-assets>
         <a-asset-item id="butterflyModel" src="assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
