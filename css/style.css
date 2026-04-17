@@ -65,13 +65,14 @@ h2 {
   margin: 0; 
 }
 
-/* Bottone START */
+/* Bottone START e Loading */
 .button-area {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 80px;
 }
+
 #loading-container {
   display: flex;
   flex-direction: column;
@@ -100,7 +101,6 @@ h2 {
 }
 
 .btn-start {
-...
   background-color: #fe5000; 
   color: white; 
   border: none;
