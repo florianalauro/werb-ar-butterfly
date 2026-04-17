@@ -41,7 +41,7 @@ window.addEventListener('load', () => {
   if (assets.hasLoaded) enableButton();
   else assets.addEventListener('loaded', enableButton);
 
-  // Monitoraggio per l'attivazione: se i sensori sono attivi e non è ancora attiva l'esperienza
+  // Monitoraggio per l'attivazione verticale
   setInterval(() => {
     if (experienceActivated || !sensorsActive) return;
 
@@ -64,12 +64,11 @@ function startExperience() {
   sensorsActive = true;
 
   // 2. Prova ad avviare WebXR (Android moderno)
-  // Nota: su alcuni browser l'ingresso in AR può nascondere temporaneamente l'overlay
   if (scene.hasWebXR) {
     scene.enterAR();
   }
 
-  // 3. Richiesta permessi sensori (Fondamentale per iOS e Giroscopio)
+  // 3. Richiesta permessi sensori (Fondamentale per iOS)
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(res => {
       if (res === 'granted') console.log('Sensors active');
@@ -81,19 +80,19 @@ function activateExperience(swarmContainer, overlay) {
   if (experienceActivated) return;
   experienceActivated = true;
   
-  // Nasconde tutto l'overlay e avvia lo sciame
   overlay.classList.add('hidden');
   createSwarm(swarmContainer);
-  console.log('Swarm Activated!');
+  console.log('Swarm Activated - Right to Left');
 }
 
-// 4. Logica dello Sciame (Z-Axis Depth - 28 metri)
+// 4. Logica dello Sciame (X-Axis - Da Destra a Sinistra)
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
   const tunnelLength = 28; 
-  const tunnelWidth = 7.5; 
+  const tunnelWidth = 7.5; // Profondità visiva dello sciame
   const tunnelHeight = 3.3;
-  const groundOffset = 1.0; 
+  const groundOffset = 0.5;
+  const povDistance = 1.5; // Distanza minima dall'utente
 
   const rows = 12; 
   const cols = 13;
@@ -102,8 +101,8 @@ function createSwarm(swarmContainer) {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       grid.push({ 
-        x: (c / (cols - 1)) * tunnelWidth - (tunnelWidth / 2),
-        y: (r / (rows - 1)) * tunnelHeight + groundOffset
+        y: (r / (rows - 1)) * tunnelHeight + groundOffset,
+        z: -((c / (cols - 1)) * tunnelWidth + povDistance)
       });
     }
   }
@@ -119,19 +118,20 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
     const resetButterfly = (el, isFirstSpawn = false) => {
-      const startZ = -tunnelLength;
-      const endZ = 5; 
+      // Iniziano a DESTRA (X = +14) e volano a SINISTRA (X = -14)
+      const startX = tunnelLength / 2;
+      const endX = -(tunnelLength / 2);
       
-      const currentSpawnZ = isFirstSpawn ? (Math.random() * -tunnelLength) : startZ;
+      const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
       const moveDuration = Math.random() * 4000 + 10000;
-      const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnZ - endZ) / (tunnelLength + 5) : 1;
+      const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
-      el.setAttribute('position', `${slot.x} ${slot.y} ${currentSpawnZ}`);
-      el.setAttribute('rotation', '0 180 0'); // Volano verso l'utente
+      el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
+      el.setAttribute('rotation', '0 -90 0'); // Girate verso sinistra
       
       el.setAttribute('animation__move', {
-        property: 'position', to: `${slot.x} ${slot.y} ${endZ}`,
+        property: 'position', to: `${endX} ${slot.y} ${slot.z}`,
         dur: currentDuration, easing: 'linear'
       });
       
