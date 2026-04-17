@@ -22,7 +22,7 @@ AFRAME.registerComponent('butterfly-color', {
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 3. Gestione Caricamento e Permessi
+// 3. Gestione Caricamento e Lifecycle
 window.addEventListener('load', () => {
   const assets = document.querySelector('a-assets');
   const scene = document.querySelector('a-scene');
@@ -32,6 +32,7 @@ window.addEventListener('load', () => {
   const camera = document.querySelector('#main-camera');
   const overlay = document.querySelector('#overlay');
 
+  // Abilita il bottone quando gli asset sono pronti
   const enableButton = () => {
     if (!loadingContainer.classList.contains('hidden')) {
       loadingContainer.classList.add('hidden');
@@ -39,25 +40,22 @@ window.addEventListener('load', () => {
     }
   };
 
-  // Controllo robusto del caricamento
-  if (assets.hasLoaded) {
-    enableButton();
-  } else {
+  if (assets.hasLoaded) enableButton();
+  else {
     assets.addEventListener('loaded', enableButton);
     scene.addEventListener('loaded', enableButton);
-    // Safety timeout: se dopo 5 secondi non ha caricato (es. problemi rete), sblocchiamo comunque
     setTimeout(enableButton, 5000);
   }
 
-  // 4. Controllo Calibrazione e Attivazione
+  // Monitoraggio costante per l'attivazione (Giroscopio + WebXR)
   setInterval(() => {
-    if (!sensorsActive || experienceActivated) return;
+    if (experienceActivated || !sensorsActive) return;
+
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
-      if (rotation && rotation.x > -25 && rotation.x < 25) {
-        experienceActivated = true;
-        overlay.classList.add('hidden'); 
-        createSwarm(swarm);
+      // Controllo inclinazione: se il telefono è verticale (pitch vicino a 0)
+      if (rotation && Math.abs(rotation.x) < 25) {
+        activateExperience(swarm, overlay);
       }
     }
   }, 200);
@@ -66,43 +64,43 @@ window.addEventListener('load', () => {
 function startExperience() {
   const scene = document.querySelector('a-scene');
   
-  // Se WebXR è supportato, proviamo ad attivarlo
-  if (scene.is('vr-mode') === false && scene.hasWebXR) {
+  // 1. Mostra subito il messaggio di calibrazione (sollevare dispositivo)
+  proceedToCalibration();
+
+  // 2. Se possibile, entra in modalità AR (WebXR)
+  if (scene.hasWebXR) {
     scene.enterAR();
   }
 
+  // 3. Richiesta permessi sensori (fondamentale per iOS)
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission().then(response => {
-      if (response == 'granted') { proceed(); }
+    DeviceOrientationEvent.requestPermission().then(res => {
+      if (res === 'granted') console.log('Sensors active');
     }).catch(console.error);
-  } else { 
-    proceed(); 
   }
 }
 
-// Listener per eventi WebXR
-window.addEventListener('load', () => {
-  const scene = document.querySelector('a-scene');
-  scene.addEventListener('enter-vr', () => {
-    if (scene.is('ar-mode')) {
-      console.log('WebXR AR session started');
-      // In WebXR, l'overlay HTML potrebbe dover essere gestito diversamente
-    }
-  });
-});
-
-function proceed() {
+function proceedToCalibration() {
   sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
 }
 
-// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
+function activateExperience(swarmContainer, overlay) {
+  if (experienceActivated) return;
+  experienceActivated = true;
+  
+  // Nasconde tutto l'overlay e avvia lo sciame
+  overlay.classList.add('hidden');
+  createSwarm(swarmContainer);
+  console.log('Swarm Activated!');
+}
+
+// 4. Logica dello Sciame
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
-  
   const tunnelLength = 28; 
-  const tunnelWidth = 7.5; //9,5 - 2m circa di "passerella"
+  const tunnelWidth = 7.5; 
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
   const povDistance = 1;
@@ -130,19 +128,11 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-    // Funzione di reset modificata
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
-      
-      // Se è la prima apparizione, spawniamo in un punto a caso lungo la X
-      // Altrimenti, partono sempre dall'inizio (startX)
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
-      
       const moveDuration = Math.random() * 4000 + 10000;
-      
-      // Calcoliamo una durata proporzionale alla distanza rimanente per il primo volo
-      // per evitare che le farfalle a metà tunnel vadano troppo lente
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
@@ -150,30 +140,18 @@ function createSwarm(swarmContainer) {
       el.setAttribute('rotation', '0 -90 0');
       
       el.setAttribute('animation__move', {
-        property: 'position', 
-        to: `${endX} ${slot.y} ${slot.z}`,
-        dur: currentDuration, 
-        easing: 'linear'
+        property: 'position', to: `${endX} ${slot.y} ${slot.z}`,
+        dur: currentDuration, easing: 'linear'
       });
       
       el.setAttribute('animation__color', {
-        property: 'butterfly-color.color', 
-        from: '#ce0058', 
-        to: '#fe5000',
-        dur: currentDuration * 0.5, 
-        easing: 'linear',
-        loop: false
+        property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000',
+        dur: currentDuration * 0.5, easing: 'linear'
       });
     };
 
-    butterfly.addEventListener('animationcomplete__move', () => {
-      // Dal secondo volo in poi, isFirstSpawn è false (partono dal fondo)
-      resetButterfly(butterfly, false);
-    });
-
-    // Rimosso il setTimeout: aggiungiamo tutto subito
+    butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly, false));
     swarmContainer.appendChild(butterfly);
-    // Passiamo true per distribuire le farfalle ovunque all'avvio
     resetButterfly(butterfly, true);
   }
 }
