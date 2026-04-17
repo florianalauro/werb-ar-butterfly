@@ -1,4 +1,4 @@
-// 1. Registrazione Componente Personalizzato per il Colore
+// 1. Componente Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
@@ -22,7 +22,7 @@ AFRAME.registerComponent('butterfly-color', {
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 3. Gestione Caricamento e Lifecycle
+// 3. Gestione Caricamento
 window.addEventListener('load', () => {
   const assets = document.querySelector('a-assets');
   const btnStart = document.getElementById('btn-start');
@@ -41,14 +41,15 @@ window.addEventListener('load', () => {
   if (assets.hasLoaded) enableButton();
   else assets.addEventListener('loaded', enableButton);
 
-  // Monitoraggio per l'attivazione verticale
+  // LOOP DI CONTROLLO ORIENTAMENTO
   setInterval(() => {
     if (experienceActivated || !sensorsActive) return;
 
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
-      // Quando il telefono è verticale (pitch vicino a 0)
-      if (rotation && Math.abs(rotation.x) < 25) {
+      
+      // Assicuriamoci che la rotazione sia "reale" (non 0 puro pre-caricamento)
+      if (rotation && rotation.x !== 0 && Math.abs(rotation.x) < 25) {
         activateExperience(swarm, overlay);
       }
     }
@@ -61,17 +62,19 @@ function startExperience() {
   // 1. Mostra subito il messaggio di calibrazione
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
-  sensorsActive = true;
 
-  // 2. Prova ad avviare WebXR (Android moderno)
+  // 2. Attiva i sensori dopo 1 secondo per evitare false letture
+  setTimeout(() => { sensorsActive = true; }, 1000);
+
+  // 3. Avvia AR (WebXR per Android, automatico AR.js per iOS)
   if (scene.hasWebXR) {
     scene.enterAR();
   }
 
-  // 3. Richiesta permessi sensori (Fondamentale per iOS)
+  // 4. Permessi per iOS
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(res => {
-      if (res === 'granted') console.log('Sensors active');
+      if (res === 'granted') console.log('Sensors allowed');
     }).catch(console.error);
   }
 }
@@ -79,20 +82,18 @@ function startExperience() {
 function activateExperience(swarmContainer, overlay) {
   if (experienceActivated) return;
   experienceActivated = true;
-  
   overlay.classList.add('hidden');
   createSwarm(swarmContainer);
-  console.log('Swarm Activated - Right to Left');
 }
 
-// 4. Logica dello Sciame (X-Axis - Da Destra a Sinistra)
+// 4. Logica Sciame (X-Axis - Right to Left)
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
   const tunnelLength = 28; 
-  const tunnelWidth = 7.5; // Profondità visiva dello sciame
+  const tunnelWidth = 7.5; 
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
-  const povDistance = 1.5; // Distanza minima dall'utente
+  const povDistance = 1.5;
 
   const rows = 12; 
   const cols = 13;
@@ -118,7 +119,6 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
     const resetButterfly = (el, isFirstSpawn = false) => {
-      // Iniziano a DESTRA (X = +14) e volano a SINISTRA (X = -14)
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
       
@@ -128,7 +128,9 @@ function createSwarm(swarmContainer) {
       const currentDuration = moveDuration * distanceRatio;
 
       el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
-      el.setAttribute('rotation', '0 -90 0'); // Girate verso sinistra
+      
+      // ROTAZIONE CORRETTA: Volano verso sinistra (-X)
+      el.setAttribute('rotation', '0 90 0'); 
       
       el.setAttribute('animation__move', {
         property: 'position', to: `${endX} ${slot.y} ${slot.z}`,
