@@ -6,8 +6,6 @@
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <link rel="stylesheet" href="css/style.css">
   </head>
 
@@ -28,7 +26,8 @@
 
         <div class="button-area">
           <div id="loading-container">
-            <img src="assets/icons/loading.gif" alt="Loading..." class="loading-gif">
+            <div class="spinner"></div>
+            <p class="loading-text">Loading Assets...</p>
           </div>
           <button id="btn-start" class="btn-start hidden" onclick="startExperience()">START</button>
         </div>
