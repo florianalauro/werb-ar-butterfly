@@ -25,14 +25,12 @@ let experienceActivated = false;
 // 3. Gestione Caricamento e Lifecycle
 window.addEventListener('load', () => {
   const assets = document.querySelector('a-assets');
-  const scene = document.querySelector('a-scene');
   const btnStart = document.getElementById('btn-start');
   const loadingContainer = document.getElementById('loading-container');
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
   const overlay = document.querySelector('#overlay');
 
-  // Abilita il bottone quando gli asset sono pronti
   const enableButton = () => {
     if (!loadingContainer.classList.contains('hidden')) {
       loadingContainer.classList.add('hidden');
@@ -41,19 +39,15 @@ window.addEventListener('load', () => {
   };
 
   if (assets.hasLoaded) enableButton();
-  else {
-    assets.addEventListener('loaded', enableButton);
-    scene.addEventListener('loaded', enableButton);
-    setTimeout(enableButton, 5000);
-  }
+  else assets.addEventListener('loaded', enableButton);
 
-  // Monitoraggio costante per l'attivazione (Giroscopio + WebXR)
+  // Monitoraggio per l'attivazione: se i sensori sono attivi e non è ancora attiva l'esperienza
   setInterval(() => {
     if (experienceActivated || !sensorsActive) return;
 
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
-      // Controllo inclinazione: se il telefono è verticale (pitch vicino a 0)
+      // Quando il telefono è verticale (pitch vicino a 0)
       if (rotation && Math.abs(rotation.x) < 25) {
         activateExperience(swarm, overlay);
       }
@@ -64,26 +58,23 @@ window.addEventListener('load', () => {
 function startExperience() {
   const scene = document.querySelector('a-scene');
   
-  // 1. Mostra subito il messaggio di calibrazione (sollevare dispositivo)
-  proceedToCalibration();
+  // 1. Mostra subito il messaggio di calibrazione
+  document.getElementById('status-msg').classList.add('hidden');
+  document.getElementById('calibration-msg').classList.remove('hidden');
+  sensorsActive = true;
 
-  // 2. Se possibile, entra in modalità AR (WebXR)
+  // 2. Prova ad avviare WebXR (Android moderno)
+  // Nota: su alcuni browser l'ingresso in AR può nascondere temporaneamente l'overlay
   if (scene.hasWebXR) {
     scene.enterAR();
   }
 
-  // 3. Richiesta permessi sensori (fondamentale per iOS)
+  // 3. Richiesta permessi sensori (Fondamentale per iOS e Giroscopio)
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(res => {
       if (res === 'granted') console.log('Sensors active');
     }).catch(console.error);
   }
-}
-
-function proceedToCalibration() {
-  sensorsActive = true;
-  document.getElementById('status-msg').classList.add('hidden');
-  document.getElementById('calibration-msg').classList.remove('hidden');
 }
 
 function activateExperience(swarmContainer, overlay) {
@@ -96,14 +87,13 @@ function activateExperience(swarmContainer, overlay) {
   console.log('Swarm Activated!');
 }
 
-// 4. Logica dello Sciame
+// 4. Logica dello Sciame (Z-Axis Depth - 28 metri)
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
   const tunnelLength = 28; 
   const tunnelWidth = 7.5; 
   const tunnelHeight = 3.3;
-  const groundOffset = 0.5;
-  const povDistance = 1;
+  const groundOffset = 1.0; 
 
   const rows = 12; 
   const cols = 13;
@@ -112,8 +102,8 @@ function createSwarm(swarmContainer) {
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       grid.push({ 
-        y: (r / (rows - 1)) * tunnelHeight + groundOffset,
-        z: -((c / (cols - 1)) * tunnelWidth + povDistance)
+        x: (c / (cols - 1)) * tunnelWidth - (tunnelWidth / 2),
+        y: (r / (rows - 1)) * tunnelHeight + groundOffset
       });
     }
   }
@@ -129,18 +119,19 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
     const resetButterfly = (el, isFirstSpawn = false) => {
-      const startX = tunnelLength / 2;
-      const endX = -(tunnelLength / 2);
-      const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
+      const startZ = -tunnelLength;
+      const endZ = 5; 
+      
+      const currentSpawnZ = isFirstSpawn ? (Math.random() * -tunnelLength) : startZ;
       const moveDuration = Math.random() * 4000 + 10000;
-      const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
+      const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnZ - endZ) / (tunnelLength + 5) : 1;
       const currentDuration = moveDuration * distanceRatio;
 
-      el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
-      el.setAttribute('rotation', '0 -90 0');
+      el.setAttribute('position', `${slot.x} ${slot.y} ${currentSpawnZ}`);
+      el.setAttribute('rotation', '0 180 0'); // Volano verso l'utente
       
       el.setAttribute('animation__move', {
-        property: 'position', to: `${endX} ${slot.y} ${slot.z}`,
+        property: 'position', to: `${slot.x} ${slot.y} ${endZ}`,
         dur: currentDuration, easing: 'linear'
       });
       
