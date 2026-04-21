@@ -1,4 +1,4 @@
-// 1. Componente Colore
+// 1. Registrazione Componente Personalizzato per il Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
@@ -22,78 +22,54 @@ AFRAME.registerComponent('butterfly-color', {
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 3. Gestione Caricamento
+// 3. Gestione Permessi
+function startExperience() {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(response => {
+      if (response == 'granted') { proceed(); }
+    }).catch(console.error);
+  } else { 
+    proceed(); 
+  }
+}
+
+function proceed() {
+  sensorsActive = true;
+  document.getElementById('status-msg').classList.add('hidden');
+  document.getElementById('calibration-msg').classList.remove('hidden');
+}
+
+// 4. Controllo Calibrazione e Attivazione
 window.addEventListener('load', () => {
-  const assets = document.querySelector('a-assets');
-  const btnStart = document.getElementById('btn-start');
-  const loadingContainer = document.getElementById('loading-container');
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
   const overlay = document.querySelector('#overlay');
 
-  const enableButton = () => {
-    if (!loadingContainer.classList.contains('hidden')) {
-      loadingContainer.classList.add('hidden');
-      btnStart.classList.remove('hidden');
-    }
-  };
-
-  if (assets.hasLoaded) enableButton();
-  else assets.addEventListener('loaded', enableButton);
-
-  // LOOP DI CONTROLLO ORIENTAMENTO
   setInterval(() => {
-    if (experienceActivated || !sensorsActive) return;
+    if (!sensorsActive || experienceActivated) return;
 
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
       
-      // Assicuriamoci che la rotazione sia "reale" (non 0 puro pre-caricamento)
-      if (rotation && rotation.x !== 0 && Math.abs(rotation.x) < 25) {
-        activateExperience(swarm, overlay);
+      // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
+      if (rotation && rotation.x > -25 && rotation.x < 25) {
+        experienceActivated = true;
+        overlay.classList.add('hidden'); 
+        createSwarm(swarm);
       }
     }
   }, 200);
 });
 
-function startExperience() {
-  const scene = document.querySelector('a-scene');
-  
-  // 1. Mostra subito il messaggio di calibrazione
-  document.getElementById('status-msg').classList.add('hidden');
-  document.getElementById('calibration-msg').classList.remove('hidden');
-
-  // 2. Attiva i sensori dopo 1 secondo per evitare false letture
-  setTimeout(() => { sensorsActive = true; }, 1000);
-
-  // 3. Avvia AR (WebXR per Android, automatico AR.js per iOS)
-  if (scene.hasWebXR) {
-    scene.enterAR();
-  }
-
-  // 4. Permessi per iOS
-  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission().then(res => {
-      if (res === 'granted') console.log('Sensors allowed');
-    }).catch(console.error);
-  }
-}
-
-function activateExperience(swarmContainer, overlay) {
-  if (experienceActivated) return;
-  experienceActivated = true;
-  overlay.classList.add('hidden');
-  createSwarm(swarmContainer);
-}
-
-// 4. Logica Sciame (X-Axis - Right to Left)
+// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
+  
   const tunnelLength = 28; 
-  const tunnelWidth = 7.5; 
+  const tunnelWidth = 7.5; //9,5 - 2m circa di "passerella"
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
-  const povDistance = 1.5;
+  const povDistance = 1;
 
   const rows = 12; 
   const cols = 13;
@@ -118,33 +94,50 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
+    // Funzione di reset modificata
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
       
+      // Se è la prima apparizione, spawniamo in un punto a caso lungo la X
+      // Altrimenti, partono sempre dall'inizio (startX)
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
+      
       const moveDuration = Math.random() * 4000 + 10000;
+      
+      // Calcoliamo una durata proporzionale alla distanza rimanente per il primo volo
+      // per evitare che le farfalle a metà tunnel vadano troppo lente
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
       el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
-      
-      // ROTAZIONE CORRETTA: Volano verso sinistra (-X)
-      el.setAttribute('rotation', '0 90 0'); 
+      el.setAttribute('rotation', '0 -90 0');
       
       el.setAttribute('animation__move', {
-        property: 'position', to: `${endX} ${slot.y} ${slot.z}`,
-        dur: currentDuration, easing: 'linear'
+        property: 'position', 
+        to: `${endX} ${slot.y} ${slot.z}`,
+        dur: currentDuration, 
+        easing: 'linear'
       });
       
       el.setAttribute('animation__color', {
-        property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000',
-        dur: currentDuration * 0.5, easing: 'linear'
+        property: 'butterfly-color.color', 
+        from: '#ce0058', 
+        to: '#fe5000',
+        dur: currentDuration * 0.5, 
+        easing: 'linear',
+        loop: false
       });
     };
 
-    butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly, false));
+    butterfly.addEventListener('animationcomplete__move', () => {
+      // Dal secondo volo in poi, isFirstSpawn è false (partono dal fondo)
+      resetButterfly(butterfly, false);
+    });
+
+    // Rimosso il setTimeout: aggiungiamo tutto subito
     swarmContainer.appendChild(butterfly);
+    // Passiamo true per distribuire le farfalle ovunque all'avvio
     resetButterfly(butterfly, true);
   }
 }
