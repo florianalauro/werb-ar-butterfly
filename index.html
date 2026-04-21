@@ -2,12 +2,12 @@
 <html lang="it">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Farfalle AR</title>
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-    <!-- AR.js caricato solo come fallback -->
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
     <link rel="stylesheet" href="css/style.css">
   </head>
 
@@ -16,7 +16,9 @@
     <div id="overlay">
       <div id="status-msg">
         <div class="logo-area">
-          <img src="assets/icons/Logo Ondulkart_w.svg" alt="Ondulkart" class="logo-img">
+          <a href="/">
+            <img src="assets/icons/Logo Ondulkart_w.svg" alt="Ondulkart" class="logo-img">
+          </a>
         </div>
 
         <div class="middle-content">
@@ -25,11 +27,7 @@
         </div>
 
         <div class="button-area">
-          <div id="loading-container">
-            <div class="spinner"></div>
-            <p class="loading-text">Loading Assets...</p>
-          </div>
-          <button id="btn-start" class="btn-start hidden" onclick="startExperience()">START</button>
+          <button class="btn-start" onclick="startExperience()">START</button>
         </div>
       </div>
 
@@ -40,18 +38,12 @@
       </div>
     </div>
 
-    <a-scene 
-      webxr="optionalFeatures: hit-test, local-floor, dom-overlay; overlayElement: #overlay;"
-      xr-mode-ui="enabled: false"
-      embedded
-      arjs="sourceType: webcam; debugUIEnabled: false;"
-      renderer="colorManagement: true; antialias: true; alpha: true;">
-      
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" renderer="colorManagement: true;" xr-mode-ui="enabled: false">
       <a-assets>
         <a-asset-item id="butterflyModel" src="assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera id="main-camera" look-controls="enabled: true" position="0 1.6 0"></a-camera>
+      <a-camera id="main-camera" look-controls></a-camera>
       <a-entity id="swarm"></a-entity>
 
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
