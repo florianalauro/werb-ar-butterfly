@@ -73,6 +73,22 @@ window.addEventListener('camera-init', (data) => {
     video.setAttribute('playsinline', 'true');
     video.setAttribute('webkit-playsinline', 'true');
     video.playsInline = true;
+
+    // Iniezione texture WebGL per il VR stereoscopico (Sfondo sdoppiato)
+    video.id = 'webcam-video';
+    
+    video.addEventListener('loadedmetadata', () => {
+      const bgPlane = document.querySelector('#stereo-bg');
+      if (bgPlane) {
+        // Calcola l'aspect ratio così da non deformare la vista
+        const aspect = video.videoWidth / video.videoHeight;
+        bgPlane.setAttribute('width', 200 * aspect);
+        bgPlane.setAttribute('height', 200);
+        
+        // Assegna il feed come materiale. depthTest:false lo manterrà perennemente sullo sfondo
+        bgPlane.setAttribute('material', 'shader: flat; src: #webcam-video; color: #FFF; depthTest: false');
+      }
+    });
   }
 });
 
