@@ -83,11 +83,13 @@ window.addEventListener('load', () => {
   if (!scene) return;
 
   scene.addEventListener('exit-vr', () => {
-    // Usa il renderer Three.js per ridimensionare correttamente il canvas
-    // senza toccare AR.js e il suo video
+    // Correggiamo solo il CSS del canvas senza toccare il renderer
+    // per evitare interferenze con il ciclo di vita VR di A-Frame
     setTimeout(() => {
-      if (scene.renderer) {
-        scene.renderer.setSize(window.innerWidth, window.innerHeight);
+      const canvas = document.querySelector('canvas');
+      if (canvas) {
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
       }
     }, 200);
   });
