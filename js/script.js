@@ -66,6 +66,16 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
+// Forzare l'inline video su iOS per evitare che Safari lo apra a schermo intero (comportamento "landscape")
+window.addEventListener('camera-init', (data) => {
+  const video = document.querySelector('video');
+  if (video) {
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('webkit-playsinline', 'true');
+    video.playsInline = true;
+  }
+});
+
 // 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
