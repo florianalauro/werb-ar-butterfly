@@ -77,18 +77,40 @@ window.addEventListener('camera-init', (data) => {
     // Iniezione texture WebGL per il VR stereoscopico (Sfondo sdoppiato)
     video.id = 'webcam-video';
     
-    video.addEventListener('loadedmetadata', () => {
+    // Funzione per iniettare la texture quando il video è pronto
+    const injectVideo = () => {
       const bgPlane = document.querySelector('#stereo-bg');
       if (bgPlane) {
-        // Calcola l'aspect ratio così da non deformare la vista
-        const aspect = video.videoWidth / video.videoHeight;
+        // Usa le dimensioni del video (con fallback) per mantenere le proporzioni
+        const vW = video.videoWidth || 640;
+        const vH = video.videoHeight || 480;
+        const aspect = vW / vH;
+        
         bgPlane.setAttribute('width', 200 * aspect);
         bgPlane.setAttribute('height', 200);
         
-        // Assegna il feed come materiale. depthTest:false lo manterrà perennemente sullo sfondo
-        bgPlane.setAttribute('material', 'shader: flat; src: #webcam-video; color: #FFF; depthTest: false');
+        // Applica direttamente la texture Three.js aggirando l'engine HTML di A-Frame
+        const mesh = bgPlane.getObject3D('mesh');
+        if (mesh) {
+           const texture = new THREE.VideoTexture(video);
+           texture.minFilter = THREE.LinearFilter;
+           texture.magFilter = THREE.LinearFilter;
+           mesh.material.map = texture;
+           mesh.material.color = new THREE.Color('#ffffff'); // Scolora il nero
+           mesh.material.needsUpdate = true;
+        }
+        
+        // Nasconde il video DOM nativo per non vederlo sotto al canvas WebGL
+        video.style.opacity = '0';
       }
-    });
+    };
+
+    // Controlla se il video è già pronto, altrimenti aspetta l'evento
+    if (video.readyState >= 2) {
+      injectVideo();
+    } else {
+      video.addEventListener('loadedmetadata', injectVideo);
+    }
   }
 });
 
