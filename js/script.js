@@ -45,7 +45,7 @@ function startExperience() {
     return;
   }
 
-  // PRIMO: richiedi fotocamera (OBBLIGATORIO su Android)
+  // Richiedi fotocamera (ma non bloccare se fallisce - es. modalità incognito)
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     navigator.mediaDevices.getUserMedia({
       video: {
@@ -60,8 +60,10 @@ function startExperience() {
         requestSensorPermissions();
       })
       .catch(err => {
-        console.error('✗ Errore fotocamera:', err);
-        showError('Fotocamera negata', 'Autorizza l\'accesso alla fotocamera per usare l\'AR.');
+        // Incognito o permesso negato - tenta comunque
+        // AR.js gestirà il permesso della fotocamera
+        console.warn('⚠️ getUserMedia fallito (incognito?):', err.name);
+        requestSensorPermissions();
       });
   } else {
     requestSensorPermissions();
