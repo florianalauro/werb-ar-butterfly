@@ -66,10 +66,11 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// Forzare l'inline video su iOS per evitare che Safari lo apra a schermo intero (comportamento "landscape")
-window.addEventListener('camera-init', (data) => {
+// Forzare l'inline video su iOS ed estrarre la texture per il VR sdoppiato
+const checkVideoInterval = setInterval(() => {
   const video = document.querySelector('video');
   if (video) {
+    clearInterval(checkVideoInterval);
     video.setAttribute('playsinline', 'true');
     video.setAttribute('webkit-playsinline', 'true');
     video.playsInline = true;
@@ -112,7 +113,7 @@ window.addEventListener('camera-init', (data) => {
       video.addEventListener('loadedmetadata', injectVideo);
     }
   }
-});
+}, 200);
 
 // 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
 function createSwarm(swarmContainer) {
