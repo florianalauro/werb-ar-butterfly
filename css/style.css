@@ -129,3 +129,17 @@ h2 {
     box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
   }
 }
+
+/* ----------------------------------------- */
+/* MODIFICHE PER GESTIONE AR/VR E WEBCAM     */
+/* ----------------------------------------- */
+
+/* Nascondiamo il video grezzo della webcam dalla pagina */
+#webcam-video { 
+  display: none; 
+}
+
+/* Nascondiamo SOLO il pulsante AR generato da A-Frame */
+.a-enter-ar-button { 
+  display: none !important; 
+}
