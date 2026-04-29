@@ -1,4 +1,4 @@
-// 1. Componente Colore (Invariato)
+// 1. Registrazione Componente Personalizzato per il Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
@@ -18,10 +18,11 @@ AFRAME.registerComponent('butterfly-color', {
   }
 });
 
+// 2. Variabili di Stato
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 2. Gestione Webcam per Modalità VR
+// 3. Avvio della Webcam per la texture in VR
 async function setupWebcam() {
   const video = document.getElementById('webcam-video');
   try {
@@ -30,16 +31,25 @@ async function setupWebcam() {
       audio: false 
     });
     video.srcObject = stream;
-    video.play();
+    await video.play();
   } catch (err) {
     console.error("Errore accesso fotocamera: ", err);
   }
 }
 
-// 3. Gestione Permessi e Avvio
+// 4. Gestione Avvio (Forza l'ingresso in AR e avvia la webcam)
 function startExperience() {
-  setupWebcam(); // Avviamo la webcam in background per il VR
+  const sceneEl = document.querySelector('a-scene');
   
+  // Prepariamo la webcam in background per l'eventuale switch in VR
+  setupWebcam();
+  
+  // Entriamo immediatamente in modalità AR immersiva (WebXR)
+  if (sceneEl.enterAR) {
+    sceneEl.enterAR().catch(err => console.warn("Auto-AR fallito:", err));
+  }
+
+  // Gestione permessi orientamento (iOS e alcuni Android)
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
@@ -55,7 +65,7 @@ function proceed() {
   document.getElementById('calibration-msg').classList.remove('hidden');
 }
 
-// 4. Logica di Calibrazione e Switch AR/VR
+// 5. Controllo Calibrazione e Switch AR/VR
 window.addEventListener('load', () => {
   const sceneEl = document.querySelector('a-scene');
   const vrBackground = document.querySelector('#vr-background');
@@ -63,26 +73,29 @@ window.addEventListener('load', () => {
   const camera = document.querySelector('#main-camera');
   const overlay = document.querySelector('#overlay');
 
-  // Gestione visibilità fotocamera in base alla modalità
+  // Gestione evento: l'utente entra in VR sdoppiato
   sceneEl.addEventListener('enter-vr', () => {
-    if (sceneEl.is('ar-mode')) {
-      // In AR nativo (WebXR AR), la fotocamera è gestita dal browser
-      vrBackground.setAttribute('visible', 'false');
-    } else {
-      // In VR (Visore Cardboard), usiamo la nostra texture video
+    // Verifichiamo se è in VR puro e non in AR immersiva
+    if (!sceneEl.is('ar-mode')) {
       vrBackground.setAttribute('visible', 'true');
+    } else {
+      vrBackground.setAttribute('visible', 'false');
     }
   });
 
+  // Gestione evento: l'utente esce dal VR sdoppiato
   sceneEl.addEventListener('exit-vr', () => {
     vrBackground.setAttribute('visible', 'false');
   });
 
-  // Controllo rotazione per attivazione (Invariato)
+  // Calibrazione: attivazione quando il telefono è verticale
   setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
+
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
+      
+      // Pitch tra -25° e 25°
       if (rotation && rotation.x > -25 && rotation.x < 25) {
         experienceActivated = true;
         overlay.classList.add('hidden'); 
@@ -92,11 +105,12 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// 5. Logica Sciame (Invariato)
+// 6. Logica dello Sciame (Invariata)
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
+  
   const tunnelLength = 28; 
-  const tunnelWidth = 7.5;
+  const tunnelWidth = 7.5; 
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
   const povDistance = 1;
@@ -127,8 +141,10 @@ function createSwarm(swarmContainer) {
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
+      
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
       const moveDuration = Math.random() * 4000 + 10000;
+      
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
