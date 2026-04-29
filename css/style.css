@@ -86,10 +86,6 @@ h2 {
   transform: scale(0.95);
 }
 
-.hidden { 
-  display: none !important; 
-}
-
 /* Schermata calibrazione */
 #calibration-msg {
   height: 100%;
@@ -134,34 +130,6 @@ h2 {
 /* MODIFICHE PER GESTIONE AR/VR E WEBCAM     */
 /* ----------------------------------------- */
 
-/* Evitiamo che il video occupi spazio fisico rompendo il layout */
-#webcam-video { 
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Nascondiamo SOLO il pulsante AR generato da A-Frame */
-.a-enter-ar-button { 
-  display: none !important; 
-}
-
-/* FIX MAGICO WEBXR: Non usiamo display:none sull'overlay altrimenti Android fa comparire la barra bianca */
-.hidden { 
-  display: none !important; 
-}
-
-#overlay.hidden {
-  display: block !important;
-  background: transparent !important;
-  pointer-events: none;
-}
-#overlay.hidden > * {
-  display: none !important;
-}
-
 /* Stile per il pulsante di switch VR nell'overlay */
 #btn-vr-switch {
   position: absolute;
@@ -177,20 +145,34 @@ h2 {
   z-index: 2000;
   pointer-events: auto;
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  cursor: pointer;
 }
 
 #btn-vr-switch:active {
   transform: scale(0.95);
 }
 
-/* Modifiche alla gestione della visibilità */
+/* Evitiamo che il video occupi spazio fisico rompendo il layout */
 #webcam-video { 
-  position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.a-enter-ar-button { display: none !important; }
+/* Nascondiamo SOLO il pulsante AR generato da A-Frame */
+.a-enter-ar-button { 
+  display: none !important; 
+}
 
-/* Eccezione per il tasto VR: deve restare visibile anche quando l'overlay è "hidden" */
+/* Nascondi generico */
+.hidden { 
+  display: none !important; 
+}
+
+/* Eccezione per l'overlay: non usiamo display:none altrimenti Android fa comparire la barra bianca */
+/* Inoltre permettiamo al tasto VR di restare visibile anche quando l'overlay è "hidden" */
 #overlay.hidden {
   display: block !important;
   background: transparent !important;
