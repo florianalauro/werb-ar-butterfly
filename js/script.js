@@ -77,6 +77,20 @@ const checkVideoInterval = setInterval(() => {
   }
 }, 100);
 
+// 6. Fix mezzo schermo bianco all'uscita dalla modalità VR
+window.addEventListener('load', () => {
+  const scene = document.querySelector('a-scene');
+  if (!scene) return;
+
+  scene.addEventListener('exit-vr', () => {
+    // A-Frame non ridimensiona il canvas automaticamente all'uscita dal VR
+    // Forziamo un evento resize per ripristinare la visualizzazione a schermo intero
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
+  });
+});
+
 
 // 7. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
 function createSwarm(swarmContainer) {
