@@ -69,51 +69,40 @@ window.addEventListener('load', () => {
 // Forzare l'inline video su iOS ed estrarre la texture per il VR sdoppiato
 const checkVideoInterval = setInterval(() => {
   const video = document.querySelector('video');
-  if (video) {
+  const bgPlane = document.querySelector('#stereo-bg');
+  
+  // Controlliamo che esista il video E che il piano abbia generato la mesh 3D
+  if (video && video.readyState >= 2 && bgPlane && bgPlane.getObject3D('mesh')) {
     clearInterval(checkVideoInterval);
+    
+    // Forzature per iOS
     video.setAttribute('playsinline', 'true');
     video.setAttribute('webkit-playsinline', 'true');
     video.playsInline = true;
-
-    // Iniezione texture WebGL per il VR stereoscopico (Sfondo sdoppiato)
     video.id = 'webcam-video';
     
-    // Funzione per iniettare la texture quando il video è pronto
-    const injectVideo = () => {
-      const bgPlane = document.querySelector('#stereo-bg');
-      if (bgPlane) {
-        // Usa le dimensioni del video (con fallback) per mantenere le proporzioni
-        const vW = video.videoWidth || 640;
-        const vH = video.videoHeight || 480;
-        const aspect = vW / vH;
-        
-        bgPlane.setAttribute('width', 200 * aspect);
-        bgPlane.setAttribute('height', 200);
-        
-        // Applica direttamente la texture Three.js aggirando l'engine HTML di A-Frame
-        const mesh = bgPlane.getObject3D('mesh');
-        if (mesh) {
-           const texture = new THREE.VideoTexture(video);
-           texture.minFilter = THREE.LinearFilter;
-           texture.magFilter = THREE.LinearFilter;
-           mesh.material.map = texture;
-           mesh.material.color = new THREE.Color('#ffffff'); // Scolora il nero
-           mesh.material.needsUpdate = true;
-        }
-        
-        // Nasconde il video DOM nativo per non vederlo sotto al canvas WebGL
-        video.style.opacity = '0';
-      }
-    };
-
-    // Controlla se il video è già pronto, altrimenti aspetta l'evento
-    if (video.readyState >= 2) {
-      injectVideo();
-    } else {
-      video.addEventListener('loadedmetadata', injectVideo);
-    }
+    // Usa le dimensioni del video per mantenere le proporzioni
+    const vW = video.videoWidth || 640;
+    const vH = video.videoHeight || 480;
+    const aspect = vW / vH;
+    
+    bgPlane.setAttribute('width', 200 * aspect);
+    bgPlane.setAttribute('height', 200);
+    
+    // Applica direttamente la texture Three.js
+    const mesh = bgPlane.getObject3D('mesh');
+    const texture = new THREE.VideoTexture(video);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    
+    mesh.material.map = texture;
+    mesh.material.color = new THREE.Color('#ffffff'); // Scolora il nero
+    mesh.material.needsUpdate = true;
+    
+    // SOLO ADESSO nasconde il video DOM nativo, per evitare la schermata nera
+    video.style.opacity = '0';
   }
-}, 200);
+}, 100);
 
 // 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
 function createSwarm(swarmContainer) {
