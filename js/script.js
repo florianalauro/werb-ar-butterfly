@@ -45,34 +45,27 @@ function startExperience() {
     return;
   }
 
-  // Primo: richiedi permesso fotocamera
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      .then(() => {
-        // Fotocamera concessa, ora richiedi sensori
-        requestSensorPermissions();
-      })
-      .catch(err => {
-        console.error('Errore fotocamera:', err);
-        showError('Permesso fotocamera negato', 'L\'esperienza richiede l\'accesso alla fotocamera del dispositivo.');
-      });
-  } else {
-    requestSensorPermissions();
-  }
-}
-
-function requestSensorPermissions() {
+  // Su iOS, richiedi permesso sensori
+  // Su Android, AR.js gestisce automaticamente i permessi della fotocamera
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission()
-      .then(response => {
-        if (response === 'granted') { proceed(); }
-        else { showError('Permesso sensori negato', 'L\'esperienza richiede l\'accesso ai sensori del dispositivo.'); }
+    // iOS 13+
+    Promise.all([
+      DeviceOrientationEvent.requestPermission(),
+      DeviceMotionEvent.requestPermission ? DeviceMotionEvent.requestPermission() : Promise.resolve('granted')
+    ])
+      .then(responses => {
+        if (responses[0] === 'granted') {
+          proceed();
+        } else {
+          showError('Permesso negato', 'L\'esperienza richiede l\'accesso ai sensori del dispositivo.');
+        }
       })
       .catch(err => {
-        console.error('Errore sensori:', err);
+        console.error('Errore permessi:', err);
         proceed();
       });
   } else {
+    // Android, browser non iOS
     proceed();
   }
 }
@@ -81,7 +74,11 @@ function proceed() {
   window.ARState.sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('error-msg').classList.add('hidden');
-  document.getElementById('calibration-msg').classList.remove('hidden');
+
+  // Su Android, AR.js ha bisogno di tempo per avviarsi
+  setTimeout(() => {
+    document.getElementById('calibration-msg').classList.remove('hidden');
+  }, 500);
 }
 
 function showError(title, message) {
