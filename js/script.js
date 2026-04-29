@@ -108,6 +108,20 @@ function showError(title, message) {
   document.getElementById('error-text').textContent = message;
 }
 
+// Listener per orientamento dispositivo (fallback per Android)
+let orientationDetected = false;
+let lastDeviceOrientation = { alpha: 0, beta: 0, gamma: 0 };
+
+window.addEventListener('deviceorientation', (event) => {
+  orientationDetected = true;
+  lastDeviceOrientation = {
+    alpha: event.alpha,
+    beta: event.beta,
+    gamma: event.gamma
+  };
+  console.log('📱 Orientamento rilevato:', lastDeviceOrientation);
+}, true);
+
 // Componente per la calibrazione
 AFRAME.registerComponent('calibration-manager', {
   init: function () {
@@ -116,7 +130,7 @@ AFRAME.registerComponent('calibration-manager', {
     this.swarm = document.querySelector('#swarm');
     this.modelLoaded = false;
     this.tickCount = 0;
-    this.fallbackTimeout = 10000; // 10 secondi fallback
+    this.fallbackTimeout = 5000; // 5 secondi fallback (ridotto)
     this.startTime = Date.now();
     this.checkModelLoading();
   },
@@ -138,21 +152,34 @@ AFRAME.registerComponent('calibration-manager', {
 
     const rotation = this.el.getAttribute('rotation');
 
-    // Debug logging
-    if (this.tickCount % 30 === 0) {
-      console.log('Rotation:', rotation, 'Sensori attivi:', window.ARState.sensorsActive, 'Elapsed:', elapsed);
+    // Debug logging (ogni 60 frame)
+    if (this.tickCount % 60 === 0) {
+      console.log('A-Frame Rotation:', rotation?.x?.toFixed(2),
+                  'DeviceOrientation Beta:', lastDeviceOrientation.beta?.toFixed(2),
+                  'Elapsed:', elapsed, 'ms');
     }
 
-    // Calibrazione: telefono in verticale (pitch tra -45 e 45 gradi)
-    // Range allargato per maggior compatibilità su Android
+    // Metodo 1: Calibrazione tramite A-Frame rotation
     if (rotation && rotation.x > -45 && rotation.x < 45) {
+      console.log('✓ Calibrato via A-Frame rotation');
       this.startExperience();
       return;
     }
 
-    // Fallback: se dopo 10 secondi nessuna calibrazione, avvia comunque
+    // Metodo 2: Calibrazione tramite deviceorientation raw (Android)
+    // Beta: pitch (verticale = 0 ± 30)
+    if (orientationDetected && lastDeviceOrientation.beta) {
+      const beta = lastDeviceOrientation.beta;
+      if (beta > -30 && beta < 30) {
+        console.log('✓ Calibrato via deviceorientation raw');
+        this.startExperience();
+        return;
+      }
+    }
+
+    // Fallback: se dopo 5 secondi, avvia comunque
     if (window.ARState.sensorsActive && elapsed > this.fallbackTimeout) {
-      console.warn('Fallback: sensori non rilevati, avvio esperienza comunque');
+      console.warn('⏱ Fallback: apertura dopo timeout');
       this.startExperience();
     }
   },
