@@ -45,10 +45,31 @@ function startExperience() {
     return;
   }
 
-  // Su iOS, richiedi permesso sensori
-  // Su Android, AR.js gestisce automaticamente i permessi della fotocamera
+  // PRIMO: richiedi fotocamera (OBBLIGATORIO su Android)
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    })
+      .then(stream => {
+        stream.getTracks().forEach(track => track.stop());
+        console.log('✓ Permesso fotocamera concesso');
+        requestSensorPermissions();
+      })
+      .catch(err => {
+        console.error('✗ Errore fotocamera:', err);
+        showError('Fotocamera negata', 'Autorizza l\'accesso alla fotocamera per usare l\'AR.');
+      });
+  } else {
+    requestSensorPermissions();
+  }
+}
+
+function requestSensorPermissions() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    // iOS 13+
     Promise.all([
       DeviceOrientationEvent.requestPermission(),
       DeviceMotionEvent.requestPermission ? DeviceMotionEvent.requestPermission() : Promise.resolve('granted')
@@ -57,15 +78,14 @@ function startExperience() {
         if (responses[0] === 'granted') {
           proceed();
         } else {
-          showError('Permesso negato', 'L\'esperienza richiede l\'accesso ai sensori del dispositivo.');
+          proceed();
         }
       })
       .catch(err => {
-        console.error('Errore permessi:', err);
+        console.error('Errore sensori:', err);
         proceed();
       });
   } else {
-    // Android, browser non iOS
     proceed();
   }
 }
@@ -75,7 +95,6 @@ function proceed() {
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('error-msg').classList.add('hidden');
 
-  // Su Android, AR.js ha bisogno di tempo per avviarsi
   setTimeout(() => {
     document.getElementById('calibration-msg').classList.remove('hidden');
   }, 500);
@@ -96,6 +115,9 @@ AFRAME.registerComponent('calibration-manager', {
     this.overlay = document.querySelector('#overlay');
     this.swarm = document.querySelector('#swarm');
     this.modelLoaded = false;
+    this.tickCount = 0;
+    this.fallbackTimeout = 10000; // 10 secondi fallback
+    this.startTime = Date.now();
     this.checkModelLoading();
   },
   checkModelLoading: function () {
@@ -109,18 +131,39 @@ AFRAME.registerComponent('calibration-manager', {
     }, 5000);
   },
   tick: function () {
-    if (this.experienceActivated || !window.ARState.sensorsActive || !this.modelLoaded) return;
+    if (this.experienceActivated || !this.modelLoaded) return;
+
+    this.tickCount++;
+    const elapsed = Date.now() - this.startTime;
 
     const rotation = this.el.getAttribute('rotation');
-    if (rotation && rotation.x > -25 && rotation.x < 25) {
-      this.experienceActivated = true;
-      this.overlay.classList.add('hidden');
-      try {
-        createSwarm(this.swarm);
-      } catch (err) {
-        console.error('Errore creazione sciame:', err);
-        showError('Errore', 'Errore durante la creazione dello sciame di farfalle.');
-      }
+
+    // Debug logging
+    if (this.tickCount % 30 === 0) {
+      console.log('Rotation:', rotation, 'Sensori attivi:', window.ARState.sensorsActive, 'Elapsed:', elapsed);
+    }
+
+    // Calibrazione: telefono in verticale (pitch tra -45 e 45 gradi)
+    // Range allargato per maggior compatibilità su Android
+    if (rotation && rotation.x > -45 && rotation.x < 45) {
+      this.startExperience();
+      return;
+    }
+
+    // Fallback: se dopo 10 secondi nessuna calibrazione, avvia comunque
+    if (window.ARState.sensorsActive && elapsed > this.fallbackTimeout) {
+      console.warn('Fallback: sensori non rilevati, avvio esperienza comunque');
+      this.startExperience();
+    }
+  },
+  startExperience: function () {
+    this.experienceActivated = true;
+    this.overlay.classList.add('hidden');
+    try {
+      createSwarm(this.swarm);
+    } catch (err) {
+      console.error('Errore creazione sciame:', err);
+      showError('Errore', 'Errore durante la creazione dello sciame di farfalle.');
     }
   }
 });
