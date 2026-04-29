@@ -2,13 +2,16 @@
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () {
-    this.wingMesh = null;
+    this.meshes = [];
     this.el.addEventListener('model-loaded', () => {
       const mesh = this.el.getObject3D('mesh');
       if (!mesh) return;
+
       mesh.traverse((node) => {
-        if (node.isMesh && node.material && node.material.name === 'Wings') {
-          this.wingMesh = node;
+        if (node.isMesh && node.material) {
+          if (node.material.name === 'Wings' || !this.meshes.length) {
+            this.meshes.push(node);
+          }
         }
       });
       this.applyColor();
@@ -16,12 +19,14 @@ AFRAME.registerComponent('butterfly-color', {
   },
   update: function () { this.applyColor(); },
   applyColor: function () {
-    if (!this.wingMesh) return;
+    if (!this.meshes.length) return;
     const newColor = new THREE.Color(this.data.color);
     newColor.convertSRGBToLinear();
-    this.wingMesh.material.color.copy(newColor);
-    this.wingMesh.material.emissive.copy(newColor);
-    this.wingMesh.material.emissiveIntensity = 15;
+    this.meshes.forEach(mesh => {
+      mesh.material.color.copy(newColor);
+      mesh.material.emissive.copy(newColor);
+      mesh.material.emissiveIntensity = 15;
+    });
   }
 });
 
@@ -33,22 +38,43 @@ window.ARState = {
 
 // 3. Gestione Permessi
 function startExperience() {
+  const isMobile = /iPhone|iPad|Android|Mobile/.test(navigator.userAgent);
+
+  if (!isMobile) {
+    showError('⚠️ Dispositivo non supportato', 'Questa esperienza richiede un dispositivo mobile con sensore di orientamento.');
+    return;
+  }
+
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission().then(response => {
-      if (response == 'granted') { proceed(); }
-    }).catch(err => {
-      console.error(err);
-      alert('Per favore, consenti l\'accesso ai sensori per avviare l\'esperienza.');
-    });
-  } else { 
-    proceed(); 
+    DeviceOrientationEvent.requestPermission()
+      .then(response => {
+        if (response === 'granted') { proceed(); }
+        else { showError('Permesso negato', 'L\'esperienza richiede l\'accesso ai sensori del dispositivo.'); }
+      })
+      .catch(err => {
+        console.error(err);
+        showError('Errore permessi', 'Errore durante la richiesta dei permessi dei sensori.');
+      });
+  } else if (isMobile) {
+    proceed();
+  } else {
+    showError('Browser non supportato', 'Il tuo browser non supporta i sensori di orientamento.');
   }
 }
 
 function proceed() {
   window.ARState.sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
+  document.getElementById('error-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
+}
+
+function showError(title, message) {
+  document.getElementById('status-msg').classList.add('hidden');
+  document.getElementById('calibration-msg').classList.add('hidden');
+  document.getElementById('error-msg').classList.remove('hidden');
+  document.querySelector('#error-msg h2').textContent = title;
+  document.getElementById('error-text').textContent = message;
 }
 
 // Componente per la calibrazione
@@ -57,16 +83,32 @@ AFRAME.registerComponent('calibration-manager', {
     this.experienceActivated = false;
     this.overlay = document.querySelector('#overlay');
     this.swarm = document.querySelector('#swarm');
+    this.modelLoaded = false;
+    this.checkModelLoading();
+  },
+  checkModelLoading: function () {
+    const butterflyModel = document.querySelector('#butterflyModel');
+    setTimeout(() => {
+      if (!butterflyModel || !butterflyModel.hasLoaded) {
+        showError('Errore caricamento', 'Il modello 3D della farfalla non è riuscito a caricare. Ricarica la pagina.');
+      } else {
+        this.modelLoaded = true;
+      }
+    }, 5000);
   },
   tick: function () {
-    if (this.experienceActivated || !window.ARState.sensorsActive) return;
+    if (this.experienceActivated || !window.ARState.sensorsActive || !this.modelLoaded) return;
 
     const rotation = this.el.getAttribute('rotation');
-    // Calibrazione: telefono verticale (pitch -25° a 25°)
     if (rotation && rotation.x > -25 && rotation.x < 25) {
       this.experienceActivated = true;
       this.overlay.classList.add('hidden');
-      createSwarm(this.swarm);
+      try {
+        createSwarm(this.swarm);
+      } catch (err) {
+        console.error('Errore creazione sciame:', err);
+        showError('Errore', 'Errore durante la creazione dello sciame di farfalle.');
+      }
     }
   }
 });
@@ -132,10 +174,10 @@ function createSwarm(swarmContainer) {
       });
       
       el.setAttribute('animation__color', {
-        property: 'butterfly-color.color', 
-        from: '#ce0058', 
+        property: 'butterfly-color.color',
+        from: '#ce0058',
         to: '#fe5000',
-        dur: currentDuration * 0.5, 
+        dur: currentDuration,
         easing: 'linear',
         loop: false
       });
