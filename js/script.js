@@ -1,209 +1,72 @@
 // 1. Registrazione Componente Personalizzato per il Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
-  init: function () {
-    this.meshes = [];
-    this.el.addEventListener('model-loaded', () => {
-      const mesh = this.el.getObject3D('mesh');
-      if (!mesh) return;
-
-      mesh.traverse((node) => {
-        if (node.isMesh && node.material) {
-          if (node.material.name === 'Wings' || !this.meshes.length) {
-            this.meshes.push(node);
-          }
-        }
-      });
-      this.applyColor();
-    });
-  },
+  init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
   update: function () { this.applyColor(); },
   applyColor: function () {
-    if (!this.meshes.length) return;
+    const mesh = this.el.getObject3D('mesh');
+    if (!mesh) return;
     const newColor = new THREE.Color(this.data.color);
     newColor.convertSRGBToLinear();
-    this.meshes.forEach(mesh => {
-      mesh.material.color.copy(newColor);
-      mesh.material.emissive.copy(newColor);
-      mesh.material.emissiveIntensity = 15;
+    mesh.traverse((node) => {
+      if (node.isMesh && node.material && node.material.name === 'Wings') {
+        node.material.color.copy(newColor);
+        node.material.emissive.copy(newColor); 
+        node.material.emissiveIntensity = 15;        
+      }
     });
   }
 });
 
 // 2. Variabili di Stato
-window.ARState = {
-  sensorsActive: false,
-  experienceActivated: false
-};
+let sensorsActive = false;
+let experienceActivated = false;
 
 // 3. Gestione Permessi
 function startExperience() {
-  const isMobile = /iPhone|iPad|Android|Mobile/.test(navigator.userAgent);
-
-  if (!isMobile) {
-    showError('⚠️ Dispositivo non supportato', 'Questa esperienza richiede un dispositivo mobile con sensore di orientamento.');
-    return;
-  }
-
-  // Richiedi fotocamera (ma non bloccare se fallisce - es. modalità incognito)
-  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'environment',
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
-    })
-      .then(stream => {
-        stream.getTracks().forEach(track => track.stop());
-        console.log('✓ Permesso fotocamera concesso');
-        requestSensorPermissions();
-      })
-      .catch(err => {
-        // Incognito o permesso negato - tenta comunque
-        // AR.js gestirà il permesso della fotocamera
-        console.warn('⚠️ getUserMedia fallito (incognito?):', err.name);
-        requestSensorPermissions();
-      });
-  } else {
-    requestSensorPermissions();
-  }
-}
-
-function requestSensorPermissions() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    Promise.all([
-      DeviceOrientationEvent.requestPermission(),
-      DeviceMotionEvent.requestPermission ? DeviceMotionEvent.requestPermission() : Promise.resolve('granted')
-    ])
-      .then(responses => {
-        if (responses[0] === 'granted') {
-          proceed();
-        } else {
-          proceed();
-        }
-      })
-      .catch(err => {
-        console.error('Errore sensori:', err);
-        proceed();
-      });
-  } else {
-    proceed();
+    DeviceOrientationEvent.requestPermission().then(response => {
+      if (response == 'granted') { proceed(); }
+    }).catch(console.error);
+  } else { 
+    proceed(); 
   }
 }
 
 function proceed() {
-  window.ARState.sensorsActive = true;
+  sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
-  document.getElementById('error-msg').classList.add('hidden');
-
-  setTimeout(() => {
-    document.getElementById('calibration-msg').classList.remove('hidden');
-  }, 500);
+  document.getElementById('calibration-msg').classList.remove('hidden');
 }
 
-function showError(title, message) {
-  document.getElementById('status-msg').classList.add('hidden');
-  document.getElementById('calibration-msg').classList.add('hidden');
-  document.getElementById('error-msg').classList.remove('hidden');
-  document.querySelector('#error-msg h2').textContent = title;
-  document.getElementById('error-text').textContent = message;
-}
+// 4. Controllo Calibrazione e Attivazione
+window.addEventListener('load', () => {
+  const swarm = document.querySelector('#swarm');
+  const camera = document.querySelector('#main-camera');
+  const overlay = document.querySelector('#overlay');
 
-// Listener per orientamento dispositivo (fallback per Android)
-let orientationDetected = false;
-let lastDeviceOrientation = { alpha: 0, beta: 0, gamma: 0 };
+  setInterval(() => {
+    if (!sensorsActive || experienceActivated) return;
 
-window.addEventListener('deviceorientation', (event) => {
-  orientationDetected = true;
-  lastDeviceOrientation = {
-    alpha: event.alpha,
-    beta: event.beta,
-    gamma: event.gamma
-  };
-  console.log('📱 Orientamento rilevato:', lastDeviceOrientation);
-}, true);
-
-// Componente per la calibrazione
-AFRAME.registerComponent('calibration-manager', {
-  init: function () {
-    this.experienceActivated = false;
-    this.overlay = document.querySelector('#overlay');
-    this.swarm = document.querySelector('#swarm');
-    this.modelLoaded = false;
-    this.tickCount = 0;
-    this.fallbackTimeout = 5000; // 5 secondi fallback (ridotto)
-    this.startTime = Date.now();
-    this.checkModelLoading();
-  },
-  checkModelLoading: function () {
-    const butterflyModel = document.querySelector('#butterflyModel');
-    setTimeout(() => {
-      if (!butterflyModel || !butterflyModel.hasLoaded) {
-        showError('Errore caricamento', 'Il modello 3D della farfalla non è riuscito a caricare. Ricarica la pagina.');
-      } else {
-        this.modelLoaded = true;
-      }
-    }, 5000);
-  },
-  tick: function () {
-    if (this.experienceActivated || !this.modelLoaded) return;
-
-    this.tickCount++;
-    const elapsed = Date.now() - this.startTime;
-
-    const rotation = this.el.getAttribute('rotation');
-
-    // Debug logging (ogni 60 frame)
-    if (this.tickCount % 60 === 0) {
-      console.log('A-Frame Rotation:', rotation?.x?.toFixed(2),
-                  'DeviceOrientation Beta:', lastDeviceOrientation.beta?.toFixed(2),
-                  'Elapsed:', elapsed, 'ms');
-    }
-
-    // Metodo 1: Calibrazione tramite A-Frame rotation
-    if (rotation && rotation.x > -45 && rotation.x < 45) {
-      console.log('✓ Calibrato via A-Frame rotation');
-      this.startExperience();
-      return;
-    }
-
-    // Metodo 2: Calibrazione tramite deviceorientation raw (Android)
-    // Beta: pitch (verticale = 0 ± 30)
-    if (orientationDetected && lastDeviceOrientation.beta) {
-      const beta = lastDeviceOrientation.beta;
-      if (beta > -30 && beta < 30) {
-        console.log('✓ Calibrato via deviceorientation raw');
-        this.startExperience();
-        return;
+    if (camera.object3D) {
+      const rotation = camera.getAttribute('rotation');
+      
+      // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
+      if (rotation && rotation.x > -25 && rotation.x < 25) {
+        experienceActivated = true;
+        overlay.classList.add('hidden'); 
+        createSwarm(swarm);
       }
     }
-
-    // Fallback: se dopo 5 secondi, avvia comunque
-    if (window.ARState.sensorsActive && elapsed > this.fallbackTimeout) {
-      console.warn('⏱ Fallback: apertura dopo timeout');
-      this.startExperience();
-    }
-  },
-  startExperience: function () {
-    this.experienceActivated = true;
-    this.overlay.classList.add('hidden');
-    try {
-      createSwarm(this.swarm);
-    } catch (err) {
-      console.error('Errore creazione sciame:', err);
-      showError('Errore', 'Errore durante la creazione dello sciame di farfalle.');
-    }
-  }
+  }, 200);
 });
 
-
-// 5. Logica dello Sciame tarata sul tunnel reale (28m x 9.5m)
+// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
   
   const tunnelLength = 28; 
-  const tunnelWidth = 9.5; 
+  const tunnelWidth = 7.5; //9,5 - 2m circa di "passerella"
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
   const povDistance = 1;
@@ -258,10 +121,10 @@ function createSwarm(swarmContainer) {
       });
       
       el.setAttribute('animation__color', {
-        property: 'butterfly-color.color',
-        from: '#ce0058',
+        property: 'butterfly-color.color', 
+        from: '#ce0058', 
         to: '#fe5000',
-        dur: currentDuration,
+        dur: currentDuration * 0.5, 
         easing: 'linear',
         loop: false
       });
