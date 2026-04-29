@@ -10,6 +10,10 @@ AFRAME.registerComponent('butterfly-color', {
     newColor.convertSRGBToLinear();
     mesh.traverse((node) => {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
+        if (!node.material.isClonedForColor) {
+           node.material = node.material.clone();
+           node.material.isClonedForColor = true;
+        }
         node.material.color.copy(newColor);
         node.material.emissive.copy(newColor); 
         node.material.emissiveIntensity = 15;        
@@ -49,10 +53,11 @@ window.addEventListener('load', () => {
     if (!sensorsActive || experienceActivated) return;
 
     if (camera.object3D) {
-      const rotation = camera.getAttribute('rotation');
+      // Usiamo object3D.rotation.x (in radianti) e lo convertiamo in gradi
+      const rX = THREE.MathUtils.radToDeg(camera.object3D.rotation.x);
       
       // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
-      if (rotation && rotation.x > -25 && rotation.x < 25) {
+      if (rX > -25 && rX < 25) {
         experienceActivated = true;
         overlay.classList.add('hidden'); 
         createSwarm(swarm);
@@ -113,8 +118,12 @@ function createSwarm(swarmContainer) {
       el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
       el.setAttribute('rotation', '0 -90 0');
       
+      el.removeAttribute('animation__move');
+      el.removeAttribute('animation__color');
+
       el.setAttribute('animation__move', {
         property: 'position', 
+        from: `${currentSpawnX} ${slot.y} ${slot.z}`,
         to: `${endX} ${slot.y} ${slot.z}`,
         dur: currentDuration, 
         easing: 'linear'
