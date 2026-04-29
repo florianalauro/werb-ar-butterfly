@@ -18,13 +18,14 @@ AFRAME.registerComponent('butterfly-color', {
   }
 });
 
-// 2. Variabili di Stato
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 3. Avvio della Webcam per la texture in VR
+// 2. Avvio della Webcam (SOLO per la texture in VR)
 async function setupWebcam() {
   const video = document.getElementById('webcam-video');
+  // Se è già accesa, non facciamo nulla
+  if (video.srcObject) return; 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ 
       video: { facingMode: 'environment' }, 
@@ -33,23 +34,20 @@ async function setupWebcam() {
     video.srcObject = stream;
     await video.play();
   } catch (err) {
-    console.error("Errore accesso fotocamera: ", err);
+    console.error("Errore accesso fotocamera per VR: ", err);
   }
 }
 
-// 4. Gestione Avvio (Forza l'ingresso in AR e avvia la webcam)
+// 3. Gestione Avvio (Forza ingresso in AR nativo SENZA accendere fotocamera manuale)
 function startExperience() {
   const sceneEl = document.querySelector('a-scene');
   
-  // Prepariamo la webcam in background per l'eventuale switch in VR
-  setupWebcam();
-  
-  // Entriamo immediatamente in modalità AR immersiva (WebXR)
+  // Entriamo in AR WebXR nativo
   if (sceneEl.enterAR) {
     sceneEl.enterAR().catch(err => console.warn("Auto-AR fallito:", err));
   }
 
-  // Gestione permessi orientamento (iOS e alcuni Android)
+  // Gestione permessi orientamento 
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
@@ -65,7 +63,7 @@ function proceed() {
   document.getElementById('calibration-msg').classList.remove('hidden');
 }
 
-// 5. Controllo Calibrazione e Switch AR/VR
+// 4. Controllo Calibrazione e Switch AR/VR
 window.addEventListener('load', () => {
   const sceneEl = document.querySelector('a-scene');
   const vrBackground = document.querySelector('#vr-background');
@@ -73,19 +71,27 @@ window.addEventListener('load', () => {
   const camera = document.querySelector('#main-camera');
   const overlay = document.querySelector('#overlay');
 
-  // Gestione evento: l'utente entra in VR sdoppiato
+  // Gestione evento: l'utente entra in una modalità immersiva
   sceneEl.addEventListener('enter-vr', () => {
-    // Verifichiamo se è in VR puro e non in AR immersiva
+    // Se siamo nel VR sdoppiato (e non nell'AR nativo)
     if (!sceneEl.is('ar-mode')) {
+      setupWebcam(); // Accendiamo la fotocamera manuale ORA
       vrBackground.setAttribute('visible', 'true');
     } else {
       vrBackground.setAttribute('visible', 'false');
     }
   });
 
-  // Gestione evento: l'utente esce dal VR sdoppiato
+  // Gestione evento: l'utente chiude il VR o l'AR
   sceneEl.addEventListener('exit-vr', () => {
     vrBackground.setAttribute('visible', 'false');
+    
+    // Spegniamo la fotocamera manuale per non consumare batteria
+    const video = document.getElementById('webcam-video');
+    if (video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop());
+      video.srcObject = null;
+    }
   });
 
   // Calibrazione: attivazione quando il telefono è verticale
@@ -94,7 +100,6 @@ window.addEventListener('load', () => {
 
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
-      
       // Pitch tra -25° e 25°
       if (rotation && rotation.x > -25 && rotation.x < 25) {
         experienceActivated = true;
@@ -105,26 +110,21 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// 6. Logica dello Sciame (Invariata)
+// 5. Logica dello Sciame (Invariata)
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
-  
   const tunnelLength = 28; 
   const tunnelWidth = 7.5; 
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
   const povDistance = 1;
-
   const rows = 12; 
   const cols = 13;
   
   let grid = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      grid.push({ 
-        y: (r / (rows - 1)) * tunnelHeight + groundOffset,
-        z: -((c / (cols - 1)) * tunnelWidth + povDistance)
-      });
+      grid.push({ y: (r / (rows - 1)) * tunnelHeight + groundOffset, z: -((c / (cols - 1)) * tunnelWidth + povDistance) });
     }
   }
   grid.sort(() => Math.random() - 0.5);
@@ -141,10 +141,8 @@ function createSwarm(swarmContainer) {
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
-      
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
       const moveDuration = Math.random() * 4000 + 10000;
-      
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
@@ -152,26 +150,14 @@ function createSwarm(swarmContainer) {
       el.setAttribute('rotation', '0 -90 0');
       
       el.setAttribute('animation__move', {
-        property: 'position', 
-        to: `${endX} ${slot.y} ${slot.z}`,
-        dur: currentDuration, 
-        easing: 'linear'
+        property: 'position', to: `${endX} ${slot.y} ${slot.z}`, dur: currentDuration, easing: 'linear'
       });
-      
       el.setAttribute('animation__color', {
-        property: 'butterfly-color.color', 
-        from: '#ce0058', 
-        to: '#fe5000',
-        dur: currentDuration * 0.5, 
-        easing: 'linear',
-        loop: false
+        property: 'butterfly-color.color', from: '#ce0058', to: '#fe5000', dur: currentDuration * 0.5, easing: 'linear', loop: false
       });
     };
 
-    butterfly.addEventListener('animationcomplete__move', () => {
-      resetButterfly(butterfly, false);
-    });
-
+    butterfly.addEventListener('animationcomplete__move', () => { resetButterfly(butterfly, false); });
     swarmContainer.appendChild(butterfly);
     resetButterfly(butterfly, true);
   }
