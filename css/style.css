@@ -4,15 +4,6 @@ body {
   overflow: hidden;
 }
 
-/* Garantisce che il canvas WebGL copra sempre tutto lo schermo.
-   Necessario con videoTexture:true e per il fix dell'uscita dalla modalità VR */
-canvas {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-}
 
 #overlay {
   position: fixed; 
