@@ -83,11 +83,13 @@ window.addEventListener('load', () => {
   if (!scene) return;
 
   scene.addEventListener('exit-vr', () => {
-    // A-Frame non ridimensiona il canvas automaticamente all'uscita dal VR
-    // Forziamo un evento resize per ripristinare la visualizzazione a schermo intero
+    // Usa il renderer Three.js per ridimensionare correttamente il canvas
+    // senza toccare AR.js e il suo video
     setTimeout(() => {
-      window.dispatchEvent(new Event('resize'));
-    }, 100);
+      if (scene.renderer) {
+        scene.renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+    }, 200);
   });
 });
 
