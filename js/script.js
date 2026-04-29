@@ -1,72 +1,83 @@
 // 1. Registrazione Componente Personalizzato per il Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
-  init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
+  init: function () {
+    this.wingMesh = null;
+    this.el.addEventListener('model-loaded', () => {
+      const mesh = this.el.getObject3D('mesh');
+      if (!mesh) return;
+      mesh.traverse((node) => {
+        if (node.isMesh && node.material && node.material.name === 'Wings') {
+          this.wingMesh = node;
+        }
+      });
+      this.applyColor();
+    });
+  },
   update: function () { this.applyColor(); },
   applyColor: function () {
-    const mesh = this.el.getObject3D('mesh');
-    if (!mesh) return;
+    if (!this.wingMesh) return;
     const newColor = new THREE.Color(this.data.color);
     newColor.convertSRGBToLinear();
-    mesh.traverse((node) => {
-      if (node.isMesh && node.material && node.material.name === 'Wings') {
-        node.material.color.copy(newColor);
-        node.material.emissive.copy(newColor); 
-        node.material.emissiveIntensity = 15;        
-      }
-    });
+    this.wingMesh.material.color.copy(newColor);
+    this.wingMesh.material.emissive.copy(newColor);
+    this.wingMesh.material.emissiveIntensity = 15;
   }
 });
 
 // 2. Variabili di Stato
-let sensorsActive = false;
-let experienceActivated = false;
+window.ARState = {
+  sensorsActive: false,
+  experienceActivated: false
+};
 
 // 3. Gestione Permessi
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
-    }).catch(console.error);
+    }).catch(err => {
+      console.error(err);
+      alert('Per favore, consenti l\'accesso ai sensori per avviare l\'esperienza.');
+    });
   } else { 
     proceed(); 
   }
 }
 
 function proceed() {
-  sensorsActive = true;
+  window.ARState.sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
 }
 
-// 4. Controllo Calibrazione e Attivazione
-window.addEventListener('load', () => {
-  const swarm = document.querySelector('#swarm');
-  const camera = document.querySelector('#main-camera');
-  const overlay = document.querySelector('#overlay');
+// Componente per la calibrazione
+AFRAME.registerComponent('calibration-manager', {
+  init: function () {
+    this.experienceActivated = false;
+    this.overlay = document.querySelector('#overlay');
+    this.swarm = document.querySelector('#swarm');
+  },
+  tick: function () {
+    if (this.experienceActivated || !window.ARState.sensorsActive) return;
 
-  setInterval(() => {
-    if (!sensorsActive || experienceActivated) return;
-
-    if (camera.object3D) {
-      const rotation = camera.getAttribute('rotation');
-      
-      // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
-      if (rotation && rotation.x > -25 && rotation.x < 25) {
-        experienceActivated = true;
-        overlay.classList.add('hidden'); 
-        createSwarm(swarm);
-      }
+    const rotation = this.el.getAttribute('rotation');
+    // Calibrazione: telefono verticale (pitch -25° a 25°)
+    if (rotation && rotation.x > -25 && rotation.x < 25) {
+      this.experienceActivated = true;
+      this.overlay.classList.add('hidden');
+      createSwarm(this.swarm);
     }
-  }, 200);
+  }
 });
 
-// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
+
+// 5. Logica dello Sciame tarata sul tunnel reale (28m x 9.5m)
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
   
   const tunnelLength = 28; 
-  const tunnelWidth = 7.5; //9,5 - 2m circa di "passerella"
+  const tunnelWidth = 9.5; 
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
   const povDistance = 1;
