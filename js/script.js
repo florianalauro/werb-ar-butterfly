@@ -10,13 +10,9 @@ AFRAME.registerComponent('butterfly-color', {
     newColor.convertSRGBToLinear();
     mesh.traverse((node) => {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
-        if (!node.material.isClonedForColor) {
-          node.material = node.material.clone();
-          node.material.isClonedForColor = true;
-        }
         node.material.color.copy(newColor);
-        node.material.emissive.copy(newColor);
-        node.material.emissiveIntensity = 15;
+        node.material.emissive.copy(newColor); 
+        node.material.emissiveIntensity = 15;        
       }
     });
   }
@@ -32,8 +28,8 @@ function startExperience() {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
     }).catch(console.error);
-  } else {
-    proceed();
+  } else { 
+    proceed(); 
   }
 }
 
@@ -53,66 +49,35 @@ window.addEventListener('load', () => {
     if (!sensorsActive || experienceActivated) return;
 
     if (camera.object3D) {
-      // Usiamo object3D.rotation.x (in radianti) e lo convertiamo in gradi
-      const rX = THREE.MathUtils.radToDeg(camera.object3D.rotation.x);
-
+      const rotation = camera.getAttribute('rotation');
+      
       // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
-      if (rX > -25 && rX < 25) {
+      if (rotation && rotation.x > -25 && rotation.x < 25) {
         experienceActivated = true;
-        overlay.classList.add('hidden');
+        overlay.classList.add('hidden'); 
         createSwarm(swarm);
       }
     }
   }, 200);
 });
 
-// 5. Fix iOS inline video
-const checkVideoInterval = setInterval(() => {
-  const video = document.querySelector('video');
-  if (video) {
-    clearInterval(checkVideoInterval);
-    video.setAttribute('playsinline', 'true');
-    video.setAttribute('webkit-playsinline', 'true');
-    video.playsInline = true;
-  }
-}, 100);
-
-// 6. Fix mezzo schermo bianco all'uscita dalla modalità VR
-window.addEventListener('load', () => {
-  const scene = document.querySelector('a-scene');
-  if (!scene) return;
-
-  scene.addEventListener('exit-vr', () => {
-    // Correggiamo solo il CSS del canvas senza toccare il renderer
-    // per evitare interferenze con il ciclo di vita VR di A-Frame
-    setTimeout(() => {
-      const canvas = document.querySelector('canvas');
-      if (canvas) {
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-      }
-    }, 200);
-  });
-});
-
-
-// 7. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
+// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
-
-  const tunnelLength = 28;
+  
+  const tunnelLength = 28; 
   const tunnelWidth = 7.5; //9,5 - 2m circa di "passerella"
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
   const povDistance = 1;
 
-  const rows = 12;
+  const rows = 12; 
   const cols = 13;
-
+  
   let grid = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      grid.push({
+      grid.push({ 
         y: (r / (rows - 1)) * tunnelHeight + groundOffset,
         z: -((c / (cols - 1)) * tunnelWidth + povDistance)
       });
@@ -123,51 +88,56 @@ function createSwarm(swarmContainer) {
   for (let i = 0; i < numButterflies; i++) {
     let butterfly = document.createElement('a-entity');
     const slot = grid[i % grid.length];
-
+    
     butterfly.setAttribute('gltf-model', '#butterflyModel');
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-    // Funzione di reset
+    // Funzione di reset modificata
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
-
+      
+      // Se è la prima apparizione, spawniamo in un punto a caso lungo la X
+      // Altrimenti, partono sempre dall'inizio (startX)
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
+      
       const moveDuration = Math.random() * 4000 + 10000;
+      
+      // Calcoliamo una durata proporzionale alla distanza rimanente per il primo volo
+      // per evitare che le farfalle a metà tunnel vadano troppo lente
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
       el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
       el.setAttribute('rotation', '0 -90 0');
-
-      el.removeAttribute('animation__move');
-      el.removeAttribute('animation__color');
-
+      
       el.setAttribute('animation__move', {
-        property: 'position',
-        from: `${currentSpawnX} ${slot.y} ${slot.z}`,
+        property: 'position', 
         to: `${endX} ${slot.y} ${slot.z}`,
-        dur: currentDuration,
+        dur: currentDuration, 
         easing: 'linear'
       });
-
+      
       el.setAttribute('animation__color', {
-        property: 'butterfly-color.color',
-        from: '#ce0058',
+        property: 'butterfly-color.color', 
+        from: '#ce0058', 
         to: '#fe5000',
-        dur: currentDuration * 0.5,
+        dur: currentDuration * 0.5, 
         easing: 'linear',
         loop: false
       });
     };
 
     butterfly.addEventListener('animationcomplete__move', () => {
+      // Dal secondo volo in poi, isFirstSpawn è false (partono dal fondo)
       resetButterfly(butterfly, false);
     });
 
+    // Rimosso il setTimeout: aggiungiamo tutto subito
     swarmContainer.appendChild(butterfly);
+    // Passiamo true per distribuire le farfalle ovunque all'avvio
     resetButterfly(butterfly, true);
   }
 }
