@@ -161,3 +161,46 @@ h2 {
 #overlay.hidden > * {
   display: none !important;
 }
+
+/* Stile per il pulsante di switch VR nell'overlay */
+#btn-vr-switch {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(254, 80, 0, 0.9);
+  color: white;
+  border: 2px solid white;
+  border-radius: 50px;
+  padding: 12px 20px;
+  font-weight: bold;
+  font-size: 0.9em;
+  z-index: 2000;
+  pointer-events: auto;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+#btn-vr-switch:active {
+  transform: scale(0.95);
+}
+
+/* Modifiche alla gestione della visibilità */
+#webcam-video { 
+  position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;
+}
+
+.a-enter-ar-button { display: none !important; }
+
+/* Eccezione per il tasto VR: deve restare visibile anche quando l'overlay è "hidden" */
+#overlay.hidden {
+  display: block !important;
+  background: transparent !important;
+  pointer-events: none;
+}
+
+#overlay.hidden > *:not(#btn-vr-switch) {
+  display: none !important;
+}
+
+#btn-vr-switch.hidden {
+  display: none !important;
+}
