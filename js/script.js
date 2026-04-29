@@ -11,12 +11,12 @@ AFRAME.registerComponent('butterfly-color', {
     mesh.traverse((node) => {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
         if (!node.material.isClonedForColor) {
-           node.material = node.material.clone();
-           node.material.isClonedForColor = true;
+          node.material = node.material.clone();
+          node.material.isClonedForColor = true;
         }
         node.material.color.copy(newColor);
-        node.material.emissive.copy(newColor); 
-        node.material.emissiveIntensity = 15;        
+        node.material.emissive.copy(newColor);
+        node.material.emissiveIntensity = 15;
       }
     });
   }
@@ -32,8 +32,8 @@ function startExperience() {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
     }).catch(console.error);
-  } else { 
-    proceed(); 
+  } else {
+    proceed();
   }
 }
 
@@ -55,11 +55,11 @@ window.addEventListener('load', () => {
     if (camera.object3D) {
       // Usiamo object3D.rotation.x (in radianti) e lo convertiamo in gradi
       const rX = THREE.MathUtils.radToDeg(camera.object3D.rotation.x);
-      
+
       // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
       if (rX > -25 && rX < 25) {
         experienceActivated = true;
-        overlay.classList.add('hidden'); 
+        overlay.classList.add('hidden');
         createSwarm(swarm);
       }
     }
@@ -77,73 +77,24 @@ const checkVideoInterval = setInterval(() => {
   }
 }, 100);
 
-// 6. Sdoppiamento Video per Cardboard VR (in puro CSS/HTML)
-let clonedVideo = null;
-
-window.addEventListener('load', () => {
-  const scene = document.querySelector('a-scene');
-  if (!scene) return;
-
-  scene.addEventListener('enter-vr', () => {
-    const originalVideo = document.querySelector('video');
-    if (originalVideo && !clonedVideo) {
-      clonedVideo = document.createElement('video');
-      clonedVideo.srcObject = originalVideo.srcObject;
-      clonedVideo.setAttribute('playsinline', 'true');
-      clonedVideo.setAttribute('webkit-playsinline', 'true');
-      clonedVideo.autoplay = true;
-      clonedVideo.muted = true;
-
-      // Occhio sinistro: video originale a sinistra (50% larghezza)
-      originalVideo.style.setProperty('width', '50vw', 'important');
-      originalVideo.style.setProperty('left', '0', 'important');
-      originalVideo.style.setProperty('margin-left', '0', 'important');
-
-      // Occhio destro: clone a destra
-      clonedVideo.style.position = 'fixed';
-      clonedVideo.style.top = '0';
-      clonedVideo.style.left = '50vw';
-      clonedVideo.style.width = '50vw';
-      clonedVideo.style.height = '100vh';
-      clonedVideo.style.objectFit = 'cover';
-      clonedVideo.style.zIndex = '-2';
-
-      document.body.appendChild(clonedVideo);
-      clonedVideo.play().catch(e => console.error(e));
-    }
-  });
-
-  scene.addEventListener('exit-vr', () => {
-    if (clonedVideo) {
-      clonedVideo.remove();
-      clonedVideo = null;
-    }
-    const originalVideo = document.querySelector('video');
-    if (originalVideo) {
-      originalVideo.style.setProperty('width', '', 'important');
-      originalVideo.style.setProperty('left', '', 'important');
-      originalVideo.style.setProperty('margin-left', '', 'important');
-    }
-  });
-});
 
 // 7. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
-  
-  const tunnelLength = 28; 
+
+  const tunnelLength = 28;
   const tunnelWidth = 7.5; //9,5 - 2m circa di "passerella"
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
   const povDistance = 1;
 
-  const rows = 12; 
+  const rows = 12;
   const cols = 13;
-  
+
   let grid = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      grid.push({ 
+      grid.push({
         y: (r / (rows - 1)) * tunnelHeight + groundOffset,
         z: -((c / (cols - 1)) * tunnelWidth + povDistance)
       });
@@ -154,7 +105,7 @@ function createSwarm(swarmContainer) {
   for (let i = 0; i < numButterflies; i++) {
     let butterfly = document.createElement('a-entity');
     const slot = grid[i % grid.length];
-    
+
     butterfly.setAttribute('gltf-model', '#butterflyModel');
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
@@ -164,7 +115,7 @@ function createSwarm(swarmContainer) {
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
-      
+
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
       const moveDuration = Math.random() * 4000 + 10000;
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
@@ -172,23 +123,23 @@ function createSwarm(swarmContainer) {
 
       el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
       el.setAttribute('rotation', '0 -90 0');
-      
+
       el.removeAttribute('animation__move');
       el.removeAttribute('animation__color');
 
       el.setAttribute('animation__move', {
-        property: 'position', 
+        property: 'position',
         from: `${currentSpawnX} ${slot.y} ${slot.z}`,
         to: `${endX} ${slot.y} ${slot.z}`,
-        dur: currentDuration, 
+        dur: currentDuration,
         easing: 'linear'
       });
-      
+
       el.setAttribute('animation__color', {
-        property: 'butterfly-color.color', 
-        from: '#ce0058', 
+        property: 'butterfly-color.color',
+        from: '#ce0058',
         to: '#fe5000',
-        dur: currentDuration * 0.5, 
+        dur: currentDuration * 0.5,
         easing: 'linear',
         loop: false
       });
