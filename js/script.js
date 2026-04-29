@@ -66,21 +66,68 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// Forzare l'inline video su iOS per evitare che Safari lo apra a schermo intero
+// 5. Fix iOS inline video
 const checkVideoInterval = setInterval(() => {
   const video = document.querySelector('video');
-  
   if (video) {
     clearInterval(checkVideoInterval);
-    
-    // Forzature per iOS
     video.setAttribute('playsinline', 'true');
     video.setAttribute('webkit-playsinline', 'true');
     video.playsInline = true;
   }
 }, 100);
 
-// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
+// 6. Sdoppiamento Video per Cardboard VR (in puro CSS/HTML)
+let clonedVideo = null;
+
+window.addEventListener('load', () => {
+  const scene = document.querySelector('a-scene');
+  if (!scene) return;
+
+  scene.addEventListener('enter-vr', () => {
+    const originalVideo = document.querySelector('video');
+    if (originalVideo && !clonedVideo) {
+      clonedVideo = document.createElement('video');
+      clonedVideo.srcObject = originalVideo.srcObject;
+      clonedVideo.setAttribute('playsinline', 'true');
+      clonedVideo.setAttribute('webkit-playsinline', 'true');
+      clonedVideo.autoplay = true;
+      clonedVideo.muted = true;
+
+      // Occhio sinistro: video originale a sinistra (50% larghezza)
+      originalVideo.style.setProperty('width', '50vw', 'important');
+      originalVideo.style.setProperty('left', '0', 'important');
+      originalVideo.style.setProperty('margin-left', '0', 'important');
+
+      // Occhio destro: clone a destra
+      clonedVideo.style.position = 'fixed';
+      clonedVideo.style.top = '0';
+      clonedVideo.style.left = '50vw';
+      clonedVideo.style.width = '50vw';
+      clonedVideo.style.height = '100vh';
+      clonedVideo.style.objectFit = 'cover';
+      clonedVideo.style.zIndex = '-2';
+
+      document.body.appendChild(clonedVideo);
+      clonedVideo.play().catch(e => console.error(e));
+    }
+  });
+
+  scene.addEventListener('exit-vr', () => {
+    if (clonedVideo) {
+      clonedVideo.remove();
+      clonedVideo = null;
+    }
+    const originalVideo = document.querySelector('video');
+    if (originalVideo) {
+      originalVideo.style.setProperty('width', '', 'important');
+      originalVideo.style.setProperty('left', '', 'important');
+      originalVideo.style.setProperty('margin-left', '', 'important');
+    }
+  });
+});
+
+// 7. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m)
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
   
@@ -112,73 +159,14 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
-// Sdoppiamento Video Sicuro (in puro CSS/HTML) per aggirare i crash WebGL
-let clonedVideo = null;
 
-window.addEventListener('load', () => {
-  const scene = document.querySelector('a-scene');
-  
-  if(scene) {
-    scene.addEventListener('enter-vr', () => {
-      // Quando entriamo in VR, il canvas si divide a metà (occhio sx e dx).
-      // Il video sottostante però rimarrebbe un unico schermo intero, rovinando il 3D.
-      // Soluzione: cloniamo il video e posizioniamoli affiancati per i due occhi!
-      const originalVideo = document.querySelector('video');
-      if (originalVideo && !clonedVideo) {
-        // Usa lo stesso stream per performance perfette
-        clonedVideo = document.createElement('video');
-        clonedVideo.srcObject = originalVideo.srcObject;
-        clonedVideo.setAttribute('playsinline', 'true');
-        clonedVideo.setAttribute('webkit-playsinline', 'true');
-        clonedVideo.autoplay = true;
-        clonedVideo.muted = true;
-        
-        // Stili CSS forzati per affiancare i video in stereoscopia ignorando i calcoli di AR.js
-        originalVideo.style.setProperty('width', '50vw', 'important');
-        originalVideo.style.setProperty('left', '0', 'important');
-        originalVideo.style.setProperty('margin-left', '0', 'important');
-        
-        clonedVideo.style.position = 'fixed';
-        clonedVideo.style.top = '0';
-        clonedVideo.style.left = '50vw';
-        clonedVideo.style.width = '50vw';
-        clonedVideo.style.height = '100vh';
-        clonedVideo.style.objectFit = 'cover';
-        clonedVideo.style.zIndex = '-2';
-        
-        document.body.appendChild(clonedVideo);
-        clonedVideo.play().catch(e => console.error(e));
-      }
-    });
-
-    scene.addEventListener('exit-vr', () => {
-      // Quando usciamo, cancelliamo il clone e ripristiniamo la vista a schermo intero normale
-      if (clonedVideo) {
-        clonedVideo.remove();
-        clonedVideo = null;
-      }
-      const originalVideo = document.querySelector('video');
-      if (originalVideo) {
-        originalVideo.style.setProperty('width', '100vw', 'important');
-        originalVideo.style.setProperty('left', '0', 'important');
-        // AR.js ricalcolerà i margini automaticamente
-      }
-    });
-  }
-});
-    // Funzione di reset modificata
+    // Funzione di reset
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
       
-      // Se è la prima apparizione, spawniamo in un punto a caso lungo la X
-      // Altrimenti, partono sempre dall'inizio (startX)
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
-      
       const moveDuration = Math.random() * 4000 + 10000;
-      
-      // Calcoliamo una durata proporzionale alla distanza rimanente per il primo volo
-      // per evitare che le farfalle a metà tunnel vadano troppo lente
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
@@ -207,13 +195,10 @@ window.addEventListener('load', () => {
     };
 
     butterfly.addEventListener('animationcomplete__move', () => {
-      // Dal secondo volo in poi, isFirstSpawn è false (partono dal fondo)
       resetButterfly(butterfly, false);
     });
 
-    // Rimosso il setTimeout: aggiungiamo tutto subito
     swarmContainer.appendChild(butterfly);
-    // Passiamo true per distribuire le farfalle ovunque all'avvio
     resetButterfly(butterfly, true);
   }
 }
