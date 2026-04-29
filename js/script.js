@@ -66,41 +66,17 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// Forzare l'inline video su iOS ed estrarre la texture per il VR sdoppiato
+// Forzare l'inline video su iOS per evitare che Safari lo apra a schermo intero
 const checkVideoInterval = setInterval(() => {
   const video = document.querySelector('video');
-  const bgPlane = document.querySelector('#stereo-bg');
   
-  // Controlliamo che esista il video E che il piano abbia generato la mesh 3D
-  if (video && video.readyState >= 2 && bgPlane && bgPlane.getObject3D('mesh')) {
+  if (video) {
     clearInterval(checkVideoInterval);
     
     // Forzature per iOS
     video.setAttribute('playsinline', 'true');
     video.setAttribute('webkit-playsinline', 'true');
     video.playsInline = true;
-    video.id = 'webcam-video';
-    
-    // Usa le dimensioni del video per mantenere le proporzioni
-    const vW = video.videoWidth || 640;
-    const vH = video.videoHeight || 480;
-    const aspect = vW / vH;
-    
-    bgPlane.setAttribute('width', 200 * aspect);
-    bgPlane.setAttribute('height', 200);
-    
-    // Applica direttamente la texture Three.js
-    const mesh = bgPlane.getObject3D('mesh');
-    const texture = new THREE.VideoTexture(video);
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-    
-    mesh.material.map = texture;
-    mesh.material.color = new THREE.Color('#ffffff'); // Scolora il nero
-    mesh.material.needsUpdate = true;
-    
-    // SOLO ADESSO nasconde il video DOM nativo, per evitare la schermata nera
-    video.style.opacity = '0';
   }
 }, 100);
 
@@ -136,7 +112,60 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
+// Sdoppiamento Video Sicuro (in puro CSS/HTML) per aggirare i crash WebGL
+let clonedVideo = null;
 
+window.addEventListener('load', () => {
+  const scene = document.querySelector('a-scene');
+  
+  if(scene) {
+    scene.addEventListener('enter-vr', () => {
+      // Quando entriamo in VR, il canvas si divide a metà (occhio sx e dx).
+      // Il video sottostante però rimarrebbe un unico schermo intero, rovinando il 3D.
+      // Soluzione: cloniamo il video e posizioniamoli affiancati per i due occhi!
+      const originalVideo = document.querySelector('video');
+      if (originalVideo && !clonedVideo) {
+        // Usa lo stesso stream per performance perfette
+        clonedVideo = document.createElement('video');
+        clonedVideo.srcObject = originalVideo.srcObject;
+        clonedVideo.setAttribute('playsinline', 'true');
+        clonedVideo.setAttribute('webkit-playsinline', 'true');
+        clonedVideo.autoplay = true;
+        clonedVideo.muted = true;
+        
+        // Stili CSS forzati per affiancare i video in stereoscopia ignorando i calcoli di AR.js
+        originalVideo.style.setProperty('width', '50vw', 'important');
+        originalVideo.style.setProperty('left', '0', 'important');
+        originalVideo.style.setProperty('margin-left', '0', 'important');
+        
+        clonedVideo.style.position = 'fixed';
+        clonedVideo.style.top = '0';
+        clonedVideo.style.left = '50vw';
+        clonedVideo.style.width = '50vw';
+        clonedVideo.style.height = '100vh';
+        clonedVideo.style.objectFit = 'cover';
+        clonedVideo.style.zIndex = '-2';
+        
+        document.body.appendChild(clonedVideo);
+        clonedVideo.play().catch(e => console.error(e));
+      }
+    });
+
+    scene.addEventListener('exit-vr', () => {
+      // Quando usciamo, cancelliamo il clone e ripristiniamo la vista a schermo intero normale
+      if (clonedVideo) {
+        clonedVideo.remove();
+        clonedVideo = null;
+      }
+      const originalVideo = document.querySelector('video');
+      if (originalVideo) {
+        originalVideo.style.setProperty('width', '100vw', 'important');
+        originalVideo.style.setProperty('left', '0', 'important');
+        // AR.js ricalcolerà i margini automaticamente
+      }
+    });
+  }
+});
     // Funzione di reset modificata
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
