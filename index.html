@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Farfalle AR</title>
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
@@ -40,17 +40,15 @@
     <a-scene 
       embedded 
       arjs="sourceType: webcam; debugUIEnabled: false;" 
-      renderer="colorManagement: true; alpha: true;"
+      renderer="colorManagement: true;"
+      xr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
       <a-assets>
         <a-asset-item id="butterflyModel" src="assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera id="main-camera" look-controls>
-        <!-- Questo piano diventerà lo sfondo della telecamera per poter esser diviso a metà nel visore -->
-        <a-plane id="stereo-bg" position="0 0 -100" width="100" height="100" material="shader: flat; color: #000; depthTest: false"></a-plane>
-      </a-camera>
+      <a-camera id="main-camera" look-controls></a-camera>
       <a-entity id="swarm"></a-entity>
 
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
