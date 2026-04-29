@@ -1,4 +1,4 @@
-// 1. Registrazione Componente Personalizzato per il Colore
+// 1. Componente Colore (Invariato)
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
@@ -18,12 +18,28 @@ AFRAME.registerComponent('butterfly-color', {
   }
 });
 
-// 2. Variabili di Stato
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 3. Gestione Permessi
+// 2. Gestione Webcam per Modalità VR
+async function setupWebcam() {
+  const video = document.getElementById('webcam-video');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { facingMode: 'environment' }, 
+      audio: false 
+    });
+    video.srcObject = stream;
+    video.play();
+  } catch (err) {
+    console.error("Errore accesso fotocamera: ", err);
+  }
+}
+
+// 3. Gestione Permessi e Avvio
 function startExperience() {
+  setupWebcam(); // Avviamo la webcam in background per il VR
+  
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
@@ -39,19 +55,34 @@ function proceed() {
   document.getElementById('calibration-msg').classList.remove('hidden');
 }
 
-// 4. Controllo Calibrazione e Attivazione
+// 4. Logica di Calibrazione e Switch AR/VR
 window.addEventListener('load', () => {
+  const sceneEl = document.querySelector('a-scene');
+  const vrBackground = document.querySelector('#vr-background');
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
   const overlay = document.querySelector('#overlay');
 
+  // Gestione visibilità fotocamera in base alla modalità
+  sceneEl.addEventListener('enter-vr', () => {
+    if (sceneEl.is('ar-mode')) {
+      // In AR nativo (WebXR AR), la fotocamera è gestita dal browser
+      vrBackground.setAttribute('visible', 'false');
+    } else {
+      // In VR (Visore Cardboard), usiamo la nostra texture video
+      vrBackground.setAttribute('visible', 'true');
+    }
+  });
+
+  sceneEl.addEventListener('exit-vr', () => {
+    vrBackground.setAttribute('visible', 'false');
+  });
+
+  // Controllo rotazione per attivazione (Invariato)
   setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
-
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
-      
-      // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
       if (rotation && rotation.x > -25 && rotation.x < 25) {
         experienceActivated = true;
         overlay.classList.add('hidden'); 
@@ -61,12 +92,11 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
+// 5. Logica Sciame (Invariato)
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
-  
   const tunnelLength = 28; 
-  const tunnelWidth = 7.5; //9,5 - 2m circa di "passerella"
+  const tunnelWidth = 7.5;
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
   const povDistance = 1;
@@ -94,19 +124,11 @@ function createSwarm(swarmContainer) {
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-    // Funzione di reset modificata
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
-      
-      // Se è la prima apparizione, spawniamo in un punto a caso lungo la X
-      // Altrimenti, partono sempre dall'inizio (startX)
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
-      
       const moveDuration = Math.random() * 4000 + 10000;
-      
-      // Calcoliamo una durata proporzionale alla distanza rimanente per il primo volo
-      // per evitare che le farfalle a metà tunnel vadano troppo lente
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
@@ -131,13 +153,10 @@ function createSwarm(swarmContainer) {
     };
 
     butterfly.addEventListener('animationcomplete__move', () => {
-      // Dal secondo volo in poi, isFirstSpawn è false (partono dal fondo)
       resetButterfly(butterfly, false);
     });
 
-    // Rimosso il setTimeout: aggiungiamo tutto subito
     swarmContainer.appendChild(butterfly);
-    // Passiamo true per distribuire le farfalle ovunque all'avvio
     resetButterfly(butterfly, true);
   }
 }
