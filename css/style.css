@@ -1,4 +1,4 @@
-/* Reset e stili base corpo */
+/* 1. RESET E STILI BASE */
 body {
   margin: 0;
   overflow: hidden;
@@ -22,7 +22,7 @@ body {
   pointer-events: none;
 }
 
-/* Contenitore principale */
+/* 2. CONTENITORE PRINCIPALE (START SCREEN) */
 #status-msg {
   display: flex;
   flex-direction: column;
@@ -32,13 +32,11 @@ body {
   box-sizing: border-box;
 }
 
-/* Logo */
 .logo-img {
   width: 260px;
   height: auto;
 }
 
-/* Gruppo centrale */
 .middle-content {
   flex-grow: 1;
   display: flex;
@@ -65,7 +63,7 @@ h2 {
   margin: 0; 
 }
 
-/* Bottone START */
+/* 3. BOTTONE START E ANIMAZIONI */
 .btn-start {
   background-color: #fe5000; 
   color: white; 
@@ -86,7 +84,6 @@ h2 {
   transform: scale(0.95);
 }
 
-/* Schermata calibrazione */
 #calibration-msg {
   height: 100%;
   display: flex;
@@ -104,7 +101,6 @@ h2 {
   animation: pulse 2s infinite;
 }
 
-/* Animazioni */
 @keyframes pulse { 
   0% { opacity: 0.4; } 
   50% { opacity: 1; } 
@@ -112,45 +108,12 @@ h2 {
 }
 
 @keyframes pulse-button {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
-  }
-  50% {
-    transform: scale(1.05);
-    box-shadow: 0 4px 25px rgba(254, 80, 0, 0.7);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4);
-  }
+  0% { transform: scale(1); box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 4px 25px rgba(254, 80, 0, 0.7); }
+  100% { transform: scale(1); box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4); }
 }
 
-/* ----------------------------------------- */
-/* MODIFICHE PER GESTIONE AR/VR E WEBCAM     */
-/* ----------------------------------------- */
-
-/* Stile per il pulsante di switch VR nell'overlay */
-#btn-vr-switch {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(254, 80, 0, 0.9);
-  color: white;
-  border: 2px solid white;
-  border-radius: 50px;
-  padding: 12px 20px;
-  font-weight: bold;
-  font-size: 0.9em;
-  z-index: 2000;
-  pointer-events: auto;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  cursor: pointer;
-}
-
-#btn-vr-switch:active {
-  transform: scale(0.95);
-}
+/* 4. FIX TECNICI PER WEBXR E ANDROID */
 
 /* Evitiamo che il video occupi spazio fisico rompendo il layout */
 #webcam-video { 
@@ -161,18 +124,18 @@ h2 {
   pointer-events: none;
 }
 
-/* Nascondiamo SOLO il pulsante AR generato da A-Frame */
+/* Nascondiamo il pulsante AR nativo di A-Frame (usiamo il nostro START) */
 .a-enter-ar-button { 
   display: none !important; 
 }
 
-/* Nascondi generico */
+/* Gestione visibilità classi hidden */
 .hidden { 
   display: none !important; 
 }
 
-/* Eccezione per l'overlay: non usiamo display:none altrimenti Android fa comparire la barra bianca */
-/* Inoltre permettiamo al tasto VR di restare visibile anche quando l'overlay è "hidden" */
+/* Fix per l'overlay: non usiamo display:none per evitare la barra bianca su Android */
+/* Permette inoltre al tasto VR di restare visibile quando l'esperienza è attiva */
 #overlay.hidden {
   display: block !important;
   background: transparent !important;
@@ -181,6 +144,31 @@ h2 {
 
 #overlay.hidden > *:not(#btn-vr-switch) {
   display: none !important;
+}
+
+/* 5. STILE MINIMALE PULSANTE VR (In basso a destra) */
+#btn-vr-switch {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.2); 
+  color: white;
+  border: 2px solid white;
+  border-radius: 5px;
+  padding: 10px 18px;
+  font-family: sans-serif;
+  font-weight: bold;
+  font-size: 16px;
+  letter-spacing: 1px;
+  z-index: 2000;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#btn-vr-switch:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 #btn-vr-switch.hidden {
