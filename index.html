@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>Farfalle AR</title>
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
@@ -43,7 +43,7 @@
         <a-asset-item id="butterflyModel" src="assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera id="main-camera" look-controls></a-camera>
+      <a-camera id="main-camera" look-controls calibration-manager></a-camera>
       <a-entity id="swarm"></a-entity>
 
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
