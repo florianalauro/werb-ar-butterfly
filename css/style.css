@@ -134,12 +134,30 @@ h2 {
 /* MODIFICHE PER GESTIONE AR/VR E WEBCAM     */
 /* ----------------------------------------- */
 
-/* Nascondiamo il video grezzo della webcam dalla pagina */
+/* Evitiamo che il video occupi spazio fisico rompendo il layout */
 #webcam-video { 
-  display: none; 
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Nascondiamo SOLO il pulsante AR generato da A-Frame */
 .a-enter-ar-button { 
   display: none !important; 
+}
+
+/* FIX MAGICO WEBXR: Non usiamo display:none sull'overlay altrimenti Android fa comparire la barra bianca */
+.hidden { 
+  display: none !important; 
+}
+
+#overlay.hidden {
+  display: block !important;
+  background: transparent !important;
+  pointer-events: none;
+}
+#overlay.hidden > * {
+  display: none !important;
 }
