@@ -45,20 +45,35 @@ function startExperience() {
     return;
   }
 
+  // Primo: richiedi permesso fotocamera
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(() => {
+        // Fotocamera concessa, ora richiedi sensori
+        requestSensorPermissions();
+      })
+      .catch(err => {
+        console.error('Errore fotocamera:', err);
+        showError('Permesso fotocamera negato', 'L\'esperienza richiede l\'accesso alla fotocamera del dispositivo.');
+      });
+  } else {
+    requestSensorPermissions();
+  }
+}
+
+function requestSensorPermissions() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission()
       .then(response => {
         if (response === 'granted') { proceed(); }
-        else { showError('Permesso negato', 'L\'esperienza richiede l\'accesso ai sensori del dispositivo.'); }
+        else { showError('Permesso sensori negato', 'L\'esperienza richiede l\'accesso ai sensori del dispositivo.'); }
       })
       .catch(err => {
-        console.error(err);
-        showError('Errore permessi', 'Errore durante la richiesta dei permessi dei sensori.');
+        console.error('Errore sensori:', err);
+        proceed();
       });
-  } else if (isMobile) {
-    proceed();
   } else {
-    showError('Browser non supportato', 'Il tuo browser non supporta i sensori di orientamento.');
+    proceed();
   }
 }
 
