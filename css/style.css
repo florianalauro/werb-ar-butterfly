@@ -5,15 +5,15 @@ body {
 }
 
 #overlay {
-  position: fixed; 
-  top: 0; 
-  left: 0; 
-  width: 100%; 
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.9); 
+  background: rgba(0,0,0,0.9);
   color: white;
-  z-index: 1000; 
-  font-family: sans-serif; 
+  z-index: 1000;
+  font-family: sans-serif;
   text-align: center;
 }
 
@@ -113,64 +113,44 @@ h2 {
   100% { transform: scale(1); box-shadow: 0 4px 15px rgba(254, 80, 0, 0.4); }
 }
 
-/* 4. FIX TECNICI PER WEBXR E ANDROID */
-
-/* Evitiamo che il video occupi spazio fisico rompendo il layout */
-#webcam-video { 
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
+/* 4. WEBCAM FULLSCREEN COME SFONDO AR */
+#webcam-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: 0;
   pointer-events: none;
 }
 
-/* Nascondiamo il pulsante AR nativo di A-Frame (usiamo il nostro START) */
-.a-enter-ar-button { 
-  display: none !important; 
+/* Scena A-Frame sopra la webcam, trasparente */
+a-scene {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 1;
 }
 
-/* Gestione visibilità classi hidden */
-.hidden { 
-  display: none !important; 
-}
-
-/* Fix per l'overlay: non usiamo display:none per evitare la barra bianca su Android */
-/* Permette inoltre al tasto VR di restare visibile quando l'esperienza è attiva */
-#overlay.hidden {
-  display: block !important;
+a-scene .a-canvas {
   background: transparent !important;
-  pointer-events: none;
 }
 
-#overlay.hidden > *:not(#btn-vr-switch) {
+/* Nascondiamo eventuali pulsanti nativi di A-Frame */
+.a-enter-ar-button,
+.a-enter-vr-button,
+.a-orientation-modal {
   display: none !important;
 }
 
-/* 5. STILE MINIMALE PULSANTE VR (In basso a destra) */
-#btn-vr-switch {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.2); 
-  color: white;
-  border: 2px solid white;
-  border-radius: 5px;
-  padding: 10px 18px;
-  font-family: sans-serif;
-  font-weight: bold;
-  font-size: 16px;
-  letter-spacing: 1px;
-  z-index: 2000;
-  pointer-events: auto;
-  cursor: pointer;
-  transition: all 0.2s ease;
+/* Gestione visibilità classi hidden */
+.hidden {
+  display: none !important;
 }
 
-#btn-vr-switch:active {
-  transform: scale(0.95);
-  background: rgba(255, 255, 255, 0.2);
-}
-
-#btn-vr-switch.hidden {
+#overlay.hidden {
   display: none !important;
 }
