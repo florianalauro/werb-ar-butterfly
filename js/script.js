@@ -1,4 +1,4 @@
-// 1. Componente personalizzato per il colore della farfalla
+// 1. Registrazione Componente Personalizzato per il Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
@@ -11,143 +11,73 @@ AFRAME.registerComponent('butterfly-color', {
     mesh.traverse((node) => {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
         node.material.color.copy(newColor);
-        node.material.emissive.copy(newColor);
-        node.material.emissiveIntensity = 15;
+        node.material.emissive.copy(newColor); 
+        node.material.emissiveIntensity = 15;        
       }
     });
   }
 });
 
-// 2. Stato
+// 2. Variabili di Stato
 let sensorsActive = false;
 let experienceActivated = false;
-let latestBeta = null;
-let orientationListenerAttached = false;
-let orientationEventReceived = false;
 
-// 3. Avvio webcam come sfondo a tutto schermo
-async function setupWebcam() {
-  const video = document.getElementById('webcam-video');
-  if (video.srcObject) return;
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } },
-      audio: false
-    });
-    video.srcObject = stream;
-    await video.play();
-  } catch (err) {
-    console.error('Errore accesso fotocamera:', err);
-    alert('Per usare l\'esperienza AR è necessario consentire l\'accesso alla fotocamera.');
+// 3. Gestione Permessi
+function startExperience() {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(response => {
+      if (response == 'granted') { proceed(); }
+    }).catch(console.error);
+  } else { 
+    proceed(); 
   }
 }
 
-// 3b. Listener globale per l'orientamento del device
-function attachOrientationListener() {
-  if (orientationListenerAttached) return;
-  orientationListenerAttached = true;
-  window.addEventListener('deviceorientation', (e) => {
-    if (e.beta !== null && e.beta !== undefined) {
-      latestBeta = e.beta;
-      orientationEventReceived = true;
-    }
-  }, true);
-}
-
-// 4. Avvio esperienza
-async function startExperience() {
-  // Avvia webcam (deve partire dentro il gesto utente per iOS)
-  await setupWebcam();
-
-  // Permesso orientamento (iOS 13+)
-  let orientationGranted = true;
-  if (typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof DeviceOrientationEvent.requestPermission === 'function') {
-    try {
-      const response = await DeviceOrientationEvent.requestPermission();
-      orientationGranted = (response === 'granted');
-      if (!orientationGranted) {
-        console.warn('Permesso orientamento negato');
-      }
-    } catch (e) {
-      orientationGranted = false;
-      console.error(e);
-    }
-  }
-
-  if (orientationGranted) attachOrientationListener();
-
-  proceed(orientationGranted);
-}
-
-function proceed(orientationGranted) {
+function proceed() {
   sensorsActive = true;
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
-
-  // Se l'orientamento non è disponibile, dopo 2s mostra fallback con tap manuale
-  if (!orientationGranted) {
-    setTimeout(() => enableManualStart('Orientamento non disponibile. Tocca per iniziare.'), 500);
-    return;
-  }
-
-  // Se entro 3s non arriva nessun evento orientamento, fallback manuale
-  setTimeout(() => {
-    if (!orientationEventReceived && !experienceActivated) {
-      enableManualStart('Sensore non rilevato. Tocca per iniziare.');
-    }
-  }, 3000);
 }
 
-function enableManualStart(msgText) {
-  const calib = document.getElementById('calibration-msg');
-  if (!calib || calib.dataset.manual === '1') return;
-  calib.dataset.manual = '1';
-  const p = calib.querySelector('p');
-  if (p) p.textContent = msgText;
-  calib.style.cursor = 'pointer';
-  calib.addEventListener('click', triggerExperience, { once: true });
-}
-
-function triggerExperience() {
-  if (experienceActivated) return;
-  experienceActivated = true;
-  const swarm = document.querySelector('#swarm');
-  const overlay = document.querySelector('#overlay');
-  overlay.classList.add('hidden');
-  createSwarm(swarm);
-}
-
-// 5. Calibrazione: parte lo sciame quando il telefono è realmente verticale
+// 4. Controllo Calibrazione e Attivazione
 window.addEventListener('load', () => {
+  const swarm = document.querySelector('#swarm');
+  const camera = document.querySelector('#main-camera');
+  const overlay = document.querySelector('#overlay');
+
   setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
-    if (latestBeta === null) return;
-    // beta ~ 90° quando il telefono è in verticale (schermo verso l'utente)
-    // Range tollerante: 60° - 110°
-    if (latestBeta > 60 && latestBeta < 110) {
-      triggerExperience();
+
+    if (camera.object3D) {
+      const rotation = camera.getAttribute('rotation');
+      
+      // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
+      if (rotation && rotation.x > -25 && rotation.x < 25) {
+        experienceActivated = true;
+        overlay.classList.add('hidden'); 
+        createSwarm(swarm);
+      }
     }
   }, 200);
 });
 
-// 6. Sciame di farfalle
+// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
 function createSwarm(swarmContainer) {
   const numButterflies = 90;
-
-  const tunnelLength = 28;
-  const tunnelWidth = 7.5;
+  
+  const tunnelLength = 28; 
+  const tunnelWidth = 7.5; //9,5 - 2m circa di "passerella"
   const tunnelHeight = 3.3;
   const groundOffset = 0.5;
   const povDistance = 1;
 
-  const rows = 12;
+  const rows = 12; 
   const cols = 13;
-
+  
   let grid = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      grid.push({
+      grid.push({ 
         y: (r / (rows - 1)) * tunnelHeight + groundOffset,
         z: -((c / (cols - 1)) * tunnelWidth + povDistance)
       });
@@ -158,47 +88,56 @@ function createSwarm(swarmContainer) {
   for (let i = 0; i < numButterflies; i++) {
     let butterfly = document.createElement('a-entity');
     const slot = grid[i % grid.length];
-
+    
     butterfly.setAttribute('gltf-model', '#butterflyModel');
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
     butterfly.setAttribute('scale', '0.2 0.15 0.2');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
+    // Funzione di reset modificata
     const resetButterfly = (el, isFirstSpawn = false) => {
       const startX = tunnelLength / 2;
       const endX = -(tunnelLength / 2);
-
+      
+      // Se è la prima apparizione, spawniamo in un punto a caso lungo la X
+      // Altrimenti, partono sempre dall'inizio (startX)
       const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
+      
       const moveDuration = Math.random() * 4000 + 10000;
-
+      
+      // Calcoliamo una durata proporzionale alla distanza rimanente per il primo volo
+      // per evitare che le farfalle a metà tunnel vadano troppo lente
       const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
       const currentDuration = moveDuration * distanceRatio;
 
       el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
       el.setAttribute('rotation', '0 -90 0');
-
+      
       el.setAttribute('animation__move', {
-        property: 'position',
+        property: 'position', 
         to: `${endX} ${slot.y} ${slot.z}`,
-        dur: currentDuration,
+        dur: currentDuration, 
         easing: 'linear'
       });
-
+      
       el.setAttribute('animation__color', {
-        property: 'butterfly-color.color',
-        from: '#ce0058',
+        property: 'butterfly-color.color', 
+        from: '#ce0058', 
         to: '#fe5000',
-        dur: currentDuration * 0.5,
+        dur: currentDuration * 0.5, 
         easing: 'linear',
         loop: false
       });
     };
 
     butterfly.addEventListener('animationcomplete__move', () => {
+      // Dal secondo volo in poi, isFirstSpawn è false (partono dal fondo)
       resetButterfly(butterfly, false);
     });
 
+    // Rimosso il setTimeout: aggiungiamo tutto subito
     swarmContainer.appendChild(butterfly);
+    // Passiamo true per distribuire le farfalle ovunque all'avvio
     resetButterfly(butterfly, true);
   }
 }
