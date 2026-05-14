@@ -1,13 +1,11 @@
-// 1. Registrazione Componente Personalizzato per il Colore
+// --- 1. COMPONENTE COLORE (MANTENUTO) ---
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
-  update: function () { this.applyColor(); },
   applyColor: function () {
     const mesh = this.el.getObject3D('mesh');
     if (!mesh) return;
     const newColor = new THREE.Color(this.data.color);
-    newColor.convertSRGBToLinear();
     mesh.traverse((node) => {
       if (node.isMesh && node.material && node.material.name === 'Wings') {
         node.material.color.copy(newColor);
@@ -18,19 +16,47 @@ AFRAME.registerComponent('butterfly-color', {
   }
 });
 
-// 2. Variabili di Stato
+// --- 2. LOGICA HAND TRACKING (NOVITÀ) ---
+const handLabel = document.querySelector('#hand-label');
+const videoElement = document.getElementById('webcamVideo');
+
+const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.6 });
+
+hands.onResults((results) => {
+  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+    const lm = results.multiHandLandmarks[0];
+    // Palmo in su: medio (12) più in alto del polso (0) e dita aperte
+    const isPalmUp = lm[12].y < lm[0].y && lm[5].x < lm[17].x;
+
+    if (isPalmUp) {
+      // Mappiamo coordinate video -> spazio AR
+      const x = (lm[9].x - 0.5) * 2.5; 
+      const y = -(lm[9].y - 0.5) * 2;
+      handLabel.setAttribute('position', `${x} ${y} -0.8`);
+      handLabel.setAttribute('visible', true);
+    } else { handLabel.setAttribute('visible', false); }
+  } else { handLabel.setAttribute('visible', false); }
+});
+
+// --- 3. START EXPERIENCE (ORIGINALE + CAMERA) ---
 let sensorsActive = false;
 let experienceActivated = false;
 
-// 3. Gestione Permessi
-function startExperience() {
+async function startExperience() {
+  // Avvio camera per MediaPipe
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  videoElement.srcObject = stream;
+  const cameraPipe = new Camera(videoElement, {
+    onFrame: async () => { await hands.send({image: videoElement}); }
+  });
+  cameraPipe.start();
+
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(response => {
       if (response == 'granted') { proceed(); }
     }).catch(console.error);
-  } else { 
-    proceed(); 
-  }
+  } else { proceed(); }
 }
 
 function proceed() {
@@ -39,7 +65,7 @@ function proceed() {
   document.getElementById('calibration-msg').classList.remove('hidden');
 }
 
-// 4. Controllo Calibrazione e Attivazione
+// --- 4. CONTROLLO CALIBRAZIONE (MANTENUTO) ---
 window.addEventListener('load', () => {
   const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
@@ -47,11 +73,8 @@ window.addEventListener('load', () => {
 
   setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
-
     if (camera.object3D) {
       const rotation = camera.getAttribute('rotation');
-      
-      // Attivazione quando il telefono è verticale (pitch tra -25° e 25°)
       if (rotation && rotation.x > -25 && rotation.x < 25) {
         experienceActivated = true;
         overlay.classList.add('hidden'); 
@@ -61,83 +84,43 @@ window.addEventListener('load', () => {
   }, 200);
 });
 
-// 5. Logica dello Sciame tarata sul tunnel reale (28m x 7.5m) - da cliente: larghezza 9,5m, lunghezza 28m, altezza 3,3m.
+// --- 5. SCIAME PERPENDICOLARE (X-AXIS) ---
 function createSwarm(swarmContainer) {
-  const numButterflies = 90;
-  
-  const tunnelLength = 28; 
-  const tunnelWidth = 7.5; //9,5 - 2m circa di "passerella"
-  const tunnelHeight = 3.3;
-  const groundOffset = 0.5;
-  const povDistance = 1;
-
-  const rows = 12; 
-  const cols = 13;
-  
-  let grid = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      grid.push({ 
-        y: (r / (rows - 1)) * tunnelHeight + groundOffset,
-        z: -((c / (cols - 1)) * tunnelWidth + povDistance)
-      });
-    }
-  }
-  grid.sort(() => Math.random() - 0.5);
+  const numButterflies = 80;
+  const tunnelLength = 28; // Ora lungo l'asse X (destra/sinistra)
+  const tunnelWidth = 7.5; 
 
   for (let i = 0; i < numButterflies; i++) {
     let butterfly = document.createElement('a-entity');
-    const slot = grid[i % grid.length];
-    
     butterfly.setAttribute('gltf-model', '#butterflyModel');
     butterfly.setAttribute('animation-mixer', 'clip: Flying');
-    butterfly.setAttribute('scale', '0.2 0.15 0.2');
+    butterfly.setAttribute('scale', '0.15 0.12 0.15');
     butterfly.setAttribute('butterfly-color', 'color: #ce0058');
 
-    // Funzione di reset modificata
     const resetButterfly = (el, isFirstSpawn = false) => {
-      const startX = tunnelLength / 2;
-      const endX = -(tunnelLength / 2);
+      // Volo da destra (14m) a sinistra (-14m)
+      const startX = 14;
+      const endX = -14;
       
-      // Se è la prima apparizione, spawniamo in un punto a caso lungo la X
-      // Altrimenti, partono sempre dall'inizio (startX)
-      const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - startX) : startX;
-      
-      const moveDuration = Math.random() * 4000 + 10000;
-      
-      // Calcoliamo una durata proporzionale alla distanza rimanente per il primo volo
-      // per evitare che le farfalle a metà tunnel vadano troppo lente
-      const distanceRatio = isFirstSpawn ? Math.abs(currentSpawnX - endX) / tunnelLength : 1;
-      const currentDuration = moveDuration * distanceRatio;
+      const currentSpawnX = isFirstSpawn ? (Math.random() * tunnelLength - 14) : startX;
+      const spawnY = Math.random() * 3 + 0.5;
+      const spawnZ = Math.random() * 4 - 6; // Posizionate davanti a te
 
-      el.setAttribute('position', `${currentSpawnX} ${slot.y} ${slot.z}`);
-      el.setAttribute('rotation', '0 -90 0');
+      el.setAttribute('position', `${currentSpawnX} ${spawnY} ${spawnZ}`);
+      el.setAttribute('rotation', '0 90 0'); // Girate verso sinistra
       
+      const duration = Math.random() * 5000 + 10000;
+
       el.setAttribute('animation__move', {
         property: 'position', 
-        to: `${endX} ${slot.y} ${slot.z}`,
-        dur: currentDuration, 
+        to: `${endX} ${spawnY} ${spawnZ}`,
+        dur: duration, 
         easing: 'linear'
-      });
-      
-      el.setAttribute('animation__color', {
-        property: 'butterfly-color.color', 
-        from: '#ce0058', 
-        to: '#fe5000',
-        dur: currentDuration * 0.5, 
-        easing: 'linear',
-        loop: false
       });
     };
 
-    butterfly.addEventListener('animationcomplete__move', () => {
-      // Dal secondo volo in poi, isFirstSpawn è false (partono dal fondo)
-      resetButterfly(butterfly, false);
-    });
-
-    // Rimosso il setTimeout: aggiungiamo tutto subito
+    butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly, false));
     swarmContainer.appendChild(butterfly);
-    // Passiamo true per distribuire le farfalle ovunque all'avvio
     resetButterfly(butterfly, true);
   }
 }
