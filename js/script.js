@@ -1,46 +1,49 @@
-// 1. Registrazione Componente Colore (MANTENUTO)
+// 1. Componente Colore
 AFRAME.registerComponent('butterfly-color', {
   schema: { color: { type: 'color', default: '#ce0058' } },
   init: function () { this.el.addEventListener('model-loaded', () => this.applyColor()); },
   applyColor: function () {
     const mesh = this.el.getObject3D('mesh');
-    if (!mesh) return;
-    const newColor = new THREE.Color(this.data.color);
-    mesh.traverse((node) => {
-      if (node.isMesh && node.material && node.material.name === 'Wings') {
-        node.material.color.copy(newColor);
-        node.material.emissive.copy(newColor); 
-        node.material.emissiveIntensity = 10;        
-      }
-    });
+    if (mesh) {
+      const newColor = new THREE.Color(this.data.color);
+      mesh.traverse((n) => {
+        if (n.isMesh && n.material && n.material.name === 'Wings') {
+          n.material.color.copy(newColor);
+          n.material.emissive.copy(newColor); 
+          n.material.emissiveIntensity = 8;        
+        }
+      });
+    }
   }
 });
 
-// 2. Variabili di Stato
+// 2. Variabili Mark XXVII
 let sensorsActive = false;
 let experienceActivated = false;
 const handData = document.querySelector('#hand-data');
 
-// 3. Gestione MediaPipe (Senza conflitto camera)
+// 3. MediaPipe Hands (Protocollo Riconoscimento Forzato)
 const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5 });
+hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
 
 hands.onResults((results) => {
   if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
     const lm = results.multiHandLandmarks[0];
-    // Gesto palmo in su: polso (0) più in basso del medio (12)
-    const isPalmUp = lm[12].y < lm[0].y;
+    
+    // Gesto: Polso (0) più basso della punta del medio (12) E palmo aperto
+    const isPalmUp = lm[12].y < lm[0].y && Math.abs(lm[4].x - lm[20].x) > 0.2;
 
     if (isPalmUp) {
-      const x = (lm[9].x - 0.5) * 3;
-      const y = -(lm[9].y - 0.5) * 2.5;
-      handData.setAttribute('position', `${x} ${y + 1.6} -1`);
+      // Coordinate adattate per Safari
+      const x = (lm[9].x - 0.5) * 4; 
+      const y = -(lm[9].y - 0.5) * 3 + 1.6;
+      handData.setAttribute('position', `${x} ${y} -1.5`);
       handData.setAttribute('visible', true);
     } else { handData.setAttribute('visible', false); }
   } else { handData.setAttribute('visible', false); }
 });
 
-// 4. Start Experience
+// 4. Inizializzazione Start
 function startExperience() {
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
     DeviceOrientationEvent.requestPermission().then(res => { if (res == 'granted') proceed(); });
@@ -52,74 +55,71 @@ function proceed() {
   document.getElementById('status-msg').classList.add('hidden');
   document.getElementById('calibration-msg').classList.remove('hidden');
 
-  // FIX SCHERMO BIANCO: MediaPipe usa il video già creato da AR.js
-  const checkVideo = setInterval(() => {
-    const arVideo = document.querySelector('video');
-    if (arVideo) {
-      clearInterval(checkVideo);
-      const camera = new Camera(arVideo, {
-        onFrame: async () => { await hands.send({image: arVideo}); }
+  // Avvio MediaPipe agganciato alla webcam di AR.js
+  const checkCam = setInterval(() => {
+    const v = document.querySelector('video');
+    if (v) {
+      clearInterval(checkCam);
+      const camera = new Camera(v, {
+        onFrame: async () => { await hands.send({image: v}); }
       });
       camera.start();
     }
-  }, 500);
+  }, 1000);
 }
 
-// 5. Controllo Calibrazione
+// 5. Trigger Calibrazione
 window.addEventListener('load', () => {
-  const swarm = document.querySelector('#swarm');
   const camera = document.querySelector('#main-camera');
-  const overlay = document.querySelector('#overlay');
-
   setInterval(() => {
     if (!sensorsActive || experienceActivated) return;
-    if (camera.object3D) {
-      const rot = camera.getAttribute('rotation');
-      if (rot && rot.x > -25 && rot.x < 25) {
-        experienceActivated = true;
-        overlay.classList.add('hidden'); 
-        createSwarm(swarm);
-      }
+    const rot = camera.getAttribute('rotation');
+    if (rot && rot.x > -25 && rot.x < 25) {
+      experienceActivated = true;
+      document.getElementById('overlay').classList.add('hidden');
+      createSwarm(document.querySelector('#swarm'));
     }
   }, 200);
 });
 
-// 6. Sciame Perpendicolare (28 metri reali)
-function createSwarm(swarmContainer) {
-  const numButterflies = 85;
-  const tunnelLength = 28; 
+// 6. Sciame ad Alta Densità (150 Farfalle, 28 metri reali)
+function createSwarm(container) {
+  const numButterflies = 150; // Aumentata densità
+  const tunnelRange = 28; 
 
   for (let i = 0; i < numButterflies; i++) {
-    let butterfly = document.createElement('a-entity');
-    butterfly.setAttribute('gltf-model', '#butterflyModel');
-    butterfly.setAttribute('animation-mixer', 'clip: Flying');
-    butterfly.setAttribute('scale', '0.18 0.15 0.18');
-    butterfly.setAttribute('butterfly-color', 'color: #ce0058');
+    let b = document.createElement('a-entity');
+    b.setAttribute('gltf-model', '#butterflyModel');
+    b.setAttribute('animation-mixer', 'clip: Flying');
+    b.setAttribute('scale', '0.22 0.18 0.22');
+    b.setAttribute('butterfly-color', 'color: #ce0058');
 
-    const resetButterfly = (el, isFirst = false) => {
-      // Volo da destra (+14) a sinistra (-14)
+    const reset = (el, first = false) => {
+      // Volo da Destra (+14) a Sinistra (-14)
       const startX = 14;
       const endX = -14;
       
-      const spawnX = isFirst ? (Math.random() * tunnelLength - 14) : startX;
-      const spawnY = Math.random() * 2 + 1; // Altezza tra 1m e 3m
-      const spawnZ = Math.random() * 6 - 3; // Profondità davanti a te
+      const spawnX = first ? (Math.random() * tunnelRange - 14) : startX;
+      const spawnY = Math.random() * 4 + 0.5;
+      const spawnZ = Math.random() * 10 - 15; // Più distanti per aumentare la prospettiva
 
       el.setAttribute('position', `${spawnX} ${spawnY} ${spawnZ}`);
-      el.setAttribute('rotation', '0 90 0'); // Orientate a sinistra
+      el.setAttribute('rotation', '0 90 0');
       
-      const duration = Math.random() * 5000 + 10000;
+      // Velocità variabile per rendere lo sciame naturale
+      const speed = Math.random() * 8000 + 12000;
 
-      el.setAttribute('animation__move', {
-        property: 'position', 
+      el.setAttribute('animation', {
+        property: 'position',
         to: `${endX} ${spawnY} ${spawnZ}`,
-        dur: duration, 
-        easing: 'linear'
+        dur: speed,
+        easing: 'linear',
+        loop: false
       });
     };
 
-    butterfly.addEventListener('animationcomplete__move', () => resetButterfly(butterfly, false));
-    swarmContainer.appendChild(butterfly);
-    resetButterfly(butterfly, true);
+    b.addEventListener('animationcomplete', () => reset(b, false));
+    container.appendChild(b);
+    reset(b, true);
   }
 }
