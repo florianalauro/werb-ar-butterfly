@@ -2,7 +2,7 @@
 <html lang="it">
   <head>
     <meta charset="utf-8">
-    <title>THE LINK - Butterfly AR Mark XXXI</title>
+    <title>THE LINK - AR Butterfly</title>
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
@@ -11,19 +11,14 @@
   </head>
 
   <body style="margin: 0; overflow: hidden;">
-
     <div id="overlay">
       <div id="status-msg">
-        <div class="logo-area">
-          <a href="/"><img src="assets/icons/Logo Ondulkart_w.svg" alt="Ondulkart" class="logo-img"></a>
-        </div>
+        <div class="logo-area"><a href="/"><img src="assets/icons/Logo Ondulkart_w.svg" alt="Ondulkart" class="logo-img"></a></div>
         <div class="middle-content">
           <h1 class="main-title">THE LINK</h1> 
           <p class="sub-title"><em>Where Technology meets the Soul of Nature</em></p> 
         </div>
-        <div class="button-area">
-          <button class="btn-start" onclick="startExperience()">START</button>
-        </div>
+        <div class="button-area"><button class="btn-start" onclick="startExperience()">START</button></div>
       </div>
       <div id="calibration-msg" class="hidden">
         <div class="icon-frame"></div>
@@ -32,29 +27,22 @@
       </div>
     </div>
 
-    <a-scene embedded 
-             arjs="sourceType: webcam; debugUIEnabled: false; facingMode: environment;" 
-             renderer="colorManagement: true; precision: medium;" 
-             xr-mode-ui="enabled: false">
-      
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" renderer="colorManagement: true; precision: medium;">
       <a-assets>
         <a-asset-item id="butterflyModel" src="assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
-      </a-assets>
+        </a-assets>
 
-      <a-camera id="main-camera" look-controls camera="far: 300; near: 0.1">
-          <a-entity id="hand-label" 
-                    text="value: QUI APPARIRANNO I DATI; align: center; color: #fe5000; width: 0.7; font-size:10; wrapCount: 15" 
-                    position="0 0.2 -0.6" 
-                    visible="false">
-          </a-entity>
+      <a-camera id="main-camera" look-controls camera="far: 250; near: 0.1">
+          <a-entity id="hand-container" position="0 0 -0.5" visible="false">
+              <a-plane width="0.4" height="0.25" material="color: #fe5000; opacity: 0.2; transparent: true"></a-plane>
+              <a-entity id="hand-text" text="value: QUI APPARIRANNO I DATI; align: center; color: #fe5000; width: 0.4"></a-entity>
+              
+              </a-entity>
       </a-camera>
       
       <a-entity id="swarm"></a-entity>
-
       <a-entity light="type: ambient; intensity: 1.5;"></a-entity>
-      <a-entity light="type: directional; intensity: 1; position: 1 1 1"></a-entity>
     </a-scene>
-
     <script src="js/script.js"></script>
   </body>
 </html>
