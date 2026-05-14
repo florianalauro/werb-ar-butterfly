@@ -2,7 +2,7 @@
 <html lang="it">
   <head>
     <meta charset="utf-8">
-    <title>THE LINK - Butterfly AR</title>
+    <title>THE LINK - AR Butterfly</title>
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
@@ -11,7 +11,8 @@
     <link rel="stylesheet" href="css/style.css">
   </head>
 
-  <body>
+  <body style="margin: 0; overflow: hidden;">
+
     <div id="overlay">
       <div id="status-msg">
         <div class="logo-area">
@@ -25,6 +26,7 @@
           <button class="btn-start" onclick="startExperience()">START</button>
         </div>
       </div>
+
       <div id="calibration-msg" class="hidden">
         <div class="icon-frame"></div>
         <h2>POSITION YOUR DEVICE</h2>
@@ -32,23 +34,22 @@
       </div>
     </div>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;" renderer="colorManagement: true;">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" renderer="colorManagement: true;" xr-mode-ui="enabled: false">
       <a-assets>
         <a-asset-item id="butterflyModel" src="assets/models/animated_butterfly_fucsia.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera id="main-camera" look-controls></a-camera>
+      <a-camera id="main-camera" look-controls position="0 1.6 0"></a-camera>
+      
+      <a-entity id="swarm"></a-entity>
 
-      <a-entity id="world-anchor" position="0 0 -10">
-        <a-entity id="swarm"></a-entity>
-      </a-entity>
-
-      <a-entity id="hand-text" 
-                text="value: QUI APPARIRANNO I DATI; align: center; color: #fe5000; width: 1.5" 
+      <a-entity id="hand-data" 
+                text="value: QUI APPARIRANNO I DATI; align: center; color: #fe5000; width: 2" 
                 visible="false">
       </a-entity>
 
       <a-entity light="type: ambient; intensity: 1.2;"></a-entity>
+      <a-entity light="type: directional; intensity: 1; position: 1 1 1"></a-entity>
     </a-scene>
 
     <script src="js/script.js"></script>
